@@ -1,6 +1,7 @@
 #include <edge_ai/runtime.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <edge_ai/logger.hpp>
 
 #include <cstddef>
 #include <iostream>
@@ -18,7 +19,7 @@ int Runtime::run()
 {
     if (!source_.is_open())
     {
-        std::cerr << "[Error] Failed to open video: " << source_.path() << '\n';
+        edge_ai::Logger::error(std::string("Failed to open video: ") + source_.path());
         return 2;
     }
 
@@ -36,7 +37,7 @@ int Runtime::run()
     {
         if (frame.empty())
         {
-            std::cerr << "[Error] Received an empty frame\n";
+            edge_ai::Logger::error(std::string("Received an empty frame"));
             return 3;
         }
 
@@ -63,7 +64,7 @@ int Runtime::run()
 
         if (key == 'q' || key == 27)
         {
-            std::cout << "[Runtime] User requested exit\n";
+            edge_ai::Logger::info(std::string("[Runtime] User requested exit"));
             break;
         }
     }
@@ -72,24 +73,22 @@ int Runtime::run()
 
     if (frame_count == 0)
     {
-        std::cerr << "[Error] Video contains no readable frames\n";
+        edge_ai::Logger::error(std::string("Video contains no readable frames"));
         return 4;
     }
     
     const double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
     const double processing_fps = static_cast<double>(frame_count) / elapsed_seconds;
-    const double processing_avetime = elapsed_seconds / static_cast<double>(frame_count);
+    const double processing_avetime = (elapsed_seconds * 1000.0) / static_cast<double>(frame_count);
 
+    edge_ai::Logger::info(std::string("[Source] Video: ") + source_.path());
+    edge_ai::Logger::info(std::string("[Source] Resolution: ") + std::to_string(frame_width) + 'x' + std::to_string(frame_height));
+    edge_ai::Logger::info(std::string("[Source] FPS metadata: ") + std::to_string(source_.fps()));
 
-    std::cout << "[Source] Video: " << source_.path() << '\n';
-    std::cout << "[Source] Resolution: " << frame_width << 'x' << frame_height << '\n';
-    std::cout << "[Source] FPS metadata: " << source_.fps() << '\n';
-
-    std::cout << "[Runtime] Frames processed: " << frame_count << '\n';
-    std::cout << "[Runtime] Elapsed time: " << elapsed_seconds << " s\n";
-    std::cout << "[Runtime] Processing FPS: " << processing_fps << '\n';
-    std::cout << "[Runtime] Processing Average time: " << processing_avetime << '\n';
-
+    edge_ai::Logger::info(std::string("[Runtime] Frames processed: ") + std::to_string(frame_count));
+    edge_ai::Logger::info(std::string("[Runtime] Elapsed time: ") + std::to_string(elapsed_seconds) + 's');
+    edge_ai::Logger::info(std::string("[Runtime] Processing FPS: ") + std::to_string(processing_fps));
+    edge_ai::Logger::info(std::string("[Runtime] Processing Average time: ") + std::to_string(processing_avetime) + "ms");
 
     return 0;
 }

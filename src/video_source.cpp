@@ -1,4 +1,5 @@
 #include <edge_ai/video_source.hpp>
+#include <edge_ai/logger.hpp>
 
 namespace edge_ai
 {
@@ -20,7 +21,7 @@ double VideoSource::fps() const{
     return capture_.get(cv::CAP_PROP_FPS);
 }
 
-const VideoSource::std::string& path() const{
+const std::string& VideoSource::path() const{
     return video_path_;
 }
 } // namespace edge_ai
