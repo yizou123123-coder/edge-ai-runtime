@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <iostream>
+#include <chrono>
 
 namespace edge_ai
 {
@@ -20,6 +21,8 @@ int Runtime::run()
         std::cerr << "[Error] Failed to open video: " << source_.path() << '\n';
         return 2;
     }
+
+    const auto start_time = std::chrono::steady_clock::now();
 
     cv::Mat frame;
     cv::Mat processed_frame;
@@ -65,16 +68,28 @@ int Runtime::run()
         }
     }
 
+    const auto end_time = std::chrono::steady_clock::now();
+
     if (frame_count == 0)
     {
         std::cerr << "[Error] Video contains no readable frames\n";
         return 4;
     }
+    
+    const double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
+    const double processing_fps = static_cast<double>(frame_count) / elapsed_seconds;
+    const double processing_avetime = elapsed_seconds / static_cast<double>(frame_count);
+
 
     std::cout << "[Source] Video: " << source_.path() << '\n';
     std::cout << "[Source] Resolution: " << frame_width << 'x' << frame_height << '\n';
     std::cout << "[Source] FPS metadata: " << source_.fps() << '\n';
-    std::cout << "[Runtime] Frames read: " << frame_count << '\n';
+
+    std::cout << "[Runtime] Frames processed: " << frame_count << '\n';
+    std::cout << "[Runtime] Elapsed time: " << elapsed_seconds << " s\n";
+    std::cout << "[Runtime] Processing FPS: " << processing_fps << '\n';
+    std::cout << "[Runtime] Processing Average time: " << processing_avetime << '\n';
+
 
     return 0;
 }
