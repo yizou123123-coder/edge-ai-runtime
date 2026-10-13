@@ -15,5 +15,13 @@ int main(int argc, char* argv[])
 
     edge_ai::Runtime runtime(video_path);
 
-    return runtime.run();
+    if (!runtime.start())
+    {
+        return runtime.exit_code();
+    }
+
+    // 主线程等待worker线程完成
+    runtime.join();
+
+    return runtime.exit_code();
 }   
