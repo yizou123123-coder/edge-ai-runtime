@@ -5,7 +5,7 @@
 int main()
 {
     const std::string video_path = "/home/yizou/datasets/edge-ai-runtime/test.mp4";
-    edge_ai::Runtime runtime(video_path);
+    edge_ai::Runtime runtime(video_path, 30);
 
     const bool first_start = runtime.start(); //first_start为true
     const bool second_start = runtime.start(); // second_start为false

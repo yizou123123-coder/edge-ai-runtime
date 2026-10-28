@@ -3,16 +3,28 @@
 #include <stdexcept>
 #include <array>
 #include <cstdint>
+#include <cmath>
 
 namespace edge_ai
 {
 
-OnnxDetector::OnnxDetector(const std::string& model_path)
+OnnxDetector::OnnxDetector(const std::string& model_path, double confidence_threshold, double nms_iou_threshold)
     // 构造函数初始化列表：初始化运行时环境、配置选项并传入模型路径、环境与配置，触发模型解析与加载
     : env_(ORT_LOGGING_LEVEL_WARNING, "edge_detector"),
       session_options_(),
-      session_(env_, model_path.c_str(), session_options_)
+      session_(env_, model_path.c_str(), session_options_),
+      confidence_threshold_(confidence_threshold),
+      nms_iou_threshold_(nms_iou_threshold)
 {
+    if (!std::isfinite(confidence_threshold_) || confidence_threshold_ < 0 || confidence_threshold_ > 1)
+    {
+        throw std::invalid_argument("confidence_threshold_ error");
+    }
+    if (!std::isfinite(nms_iou_threshold_) || nms_iou_threshold_ < 0 || nms_iou_threshold_ > 1)
+    {
+        throw std::invalid_argument("nms_iou_threshold_ error");
+    }
+
     Ort::AllocatorWithDefaultOptions allocator;
 
     input_name_ = session_.GetInputNameAllocated(0, allocator).get();
@@ -80,8 +92,8 @@ std::vector<Detection> OnnxDetector::detect(const cv::Mat& frame)
         output_data,
         num_candidates,
         preprocess_result,
-        0.25F,
-        0.45F
+        static_cast<float>(confidence_threshold_),
+        static_cast<float>(nms_iou_threshold_)
     );
 
     return detections;

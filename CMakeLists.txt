@@ -10,6 +10,7 @@ find_package(OpenCV REQUIRED COMPONENTS
     videoio
 )
 find_package(Threads REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 
 set(ONNXRUNTIME_ROOT
     ${PROJECT_SOURCE_DIR}/third_party/onnxruntime
@@ -25,6 +26,8 @@ add_library(edge_runtime_core
     src/preprocess.cpp
     src/postprocess.cpp
     src/detector.cpp
+    src/frame_source_factory.cpp
+    src/config_loader.cpp
 )
 
 # 2. 规定编译必须启用 C++17 特性
@@ -184,5 +187,148 @@ add_executable(
 
 target_link_libraries(
     inference_benchmark
+    PRIVATE edge_runtime_core
+)
+
+add_executable(
+    video_source_pacing_test
+    tests/video_source_pacing_test.cpp
+)
+
+target_link_libraries(
+    video_source_pacing_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(
+    drop_oldest_test
+    tests/drop_oldest_test.cpp
+)
+
+target_link_libraries(
+    drop_oldest_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(
+    latest_frame_test
+    tests/latest_frame_test.cpp
+)
+
+target_link_libraries(
+    latest_frame_test
+    PRIVATE edge_runtime_core
+)
+add_executable(
+    queue_policy_concurrency_test
+    tests/queue_policy_concurrency_test.cpp
+)
+
+target_link_libraries(
+    queue_policy_concurrency_test
+    PRIVATE edge_runtime_core
+)
+
+target_sources(edge_runtime_core PRIVATE
+    src/camera_source.cpp
+)
+add_executable(camera_source_test
+    tests/camera_source_test.cpp
+)
+
+target_link_libraries(camera_source_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(runtime_frame_source_test
+    tests/runtime_frame_source_test.cpp
+)
+
+target_link_libraries(runtime_frame_source_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(runtime_live_source_failure_test
+    tests/runtime_live_source_failure_test.cpp
+)
+
+target_link_libraries(runtime_live_source_failure_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(yaml_smoke_test
+    tests/yaml_smoke_test.cpp
+)
+
+target_link_libraries(yaml_smoke_test
+    PRIVATE yaml-cpp::yaml-cpp
+)
+
+target_link_libraries(edge_runtime_core
+    PRIVATE yaml-cpp::yaml-cpp
+)
+
+add_executable(config_loader_test
+    tests/config_loader_test.cpp
+)
+
+target_link_libraries(config_loader_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(config_validation_test
+    tests/config_validation_test.cpp
+)
+
+target_link_libraries(config_validation_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(config_startup_test
+    tests/config_startup_test.cpp
+)
+
+target_link_libraries(config_startup_test
+    PRIVATE edge_runtime_core
+)
+
+
+add_executable(frame_source_factory_test
+    tests/frame_source_factory_test.cpp
+)
+
+target_link_libraries(frame_source_factory_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(runtime_queue_capacity_test
+    tests/runtime_queue_capacity_test.cpp
+)
+
+target_link_libraries(runtime_queue_capacity_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(runtime_parameters_test
+    tests/runtime_parameters_test.cpp
+)
+
+target_link_libraries(runtime_parameters_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(detector_threshold_test
+    tests/detector_threshold_test.cpp
+)
+
+target_link_libraries(detector_threshold_test
+    PRIVATE edge_runtime_core
+)
+
+add_executable(display_queue_test
+    tests/display_queue_test.cpp
+)
+
+target_link_libraries(display_queue_test
     PRIVATE edge_runtime_core
 )
