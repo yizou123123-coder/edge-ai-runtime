@@ -1,1 +1,7 @@
 /build/
+/.venv-model/
+/models/*.pt
+/models/*.onnx
+/third_party/onnxruntime
+/third_party/onnxruntime-linux-*/
+/third_party/*.tgz

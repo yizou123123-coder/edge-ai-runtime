@@ -37,7 +37,7 @@ public:
     {
         // 创造 lock 这个对象，把 mutex_ 传进去初始化它，lock 利用 RAII 机制管理 mutex
         std::unique_lock<std::mutex> lock(mutex_);
-        
+
         if (policy_ == QueuePolicy::Blocking)
         {
             // 如果队列现在已经关闭，或者队列还有空间，我就继续；没有空间则producer等待
@@ -71,7 +71,7 @@ public:
                 dropped_count_++;
             }
         }
-        
+
         queue_.push(std::move(value));
         peak_size_ = std::max(peak_size_, queue_.size());
 
@@ -100,7 +100,7 @@ public:
         {
             return false;
         }
-        
+
         value = std::move(queue_.front());
         queue_.pop();
 
@@ -137,7 +137,7 @@ public:
         return n;
     }
 
-    std::size_t peak_size() const 
+    std::size_t peak_size() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         return peak_size_;
