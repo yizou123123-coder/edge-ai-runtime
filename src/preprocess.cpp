@@ -68,13 +68,9 @@ PreprocessResult preprocess_yolo(
         cv::Scalar(114, 114, 114)
     );
 
-    // BGR → RGB
-    cv::Mat rgb_image;
-    cv::cvtColor(padded_image, rgb_image, cv::COLOR_BGR2RGB);
 
-    // uint8 → float32
     cv::Mat float_image;
-    rgb_image.convertTo(float_image, CV_32FC3, 1.0F / 255.0F);
+    padded_image.convertTo(float_image, CV_32FC3, 1.0F / 255.0F);
 
     // 内存排布转换 HWC->CHW
     const std::size_t channel_size = static_cast<std::size_t>(target_width) * static_cast<std::size_t>(target_height);
@@ -87,7 +83,7 @@ PreprocessResult preprocess_yolo(
             target_height,
             target_width,
             CV_32FC1,
-            result.tensor_data.data() + c * (target_height * target_width)
+            result.tensor_data.data() + (2 - c) * channel_size
         );
     }
     // 通道分离
