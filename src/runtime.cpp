@@ -11,6 +11,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include <numeric>
 
 namespace edge_ai
 {
@@ -46,7 +47,7 @@ Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy, std::s
     {
         throw std::invalid_argument("nms_iou_threshold_ error");
     }
-    
+
 }
 
 // old
@@ -153,6 +154,7 @@ void Runtime::processing_loop()
     const auto start_time = std::chrono::steady_clock::now();
     std::vector<double> frame_ages_ms; // 每一帧处理时间组成动态数组
     std::vector<double> pre_process_ages_ms;
+    std::vector<DetectionTiming> detection_timings;
     std::size_t deadline_misses = 0;   // 处理帧超时的数量
     try
     {
@@ -164,7 +166,10 @@ void Runtime::processing_loop()
             const double pre_process_age_ms = std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
             pre_process_ages_ms.push_back(pre_process_age_ms);
 
-            auto detections = detector.detect(frame.image);
+            DetectionTiming timing;
+            auto detections = detector.detect(frame.image, &timing);
+            detection_timings.push_back(timing);
+
             const auto output_at = std::chrono::steady_clock::now();
             const double frame_age_ms = std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
             frame_ages_ms.push_back(frame_age_ms);
@@ -179,7 +184,7 @@ void Runtime::processing_loop()
                               ", Detections: " + std::to_string(detections.size()) +
                               ", Frame Age: " + std::to_string(frame_age_ms) + " ms");
             }
-            
+
             ++processed_frames;
 
             if (display_enabled_)
@@ -189,7 +194,7 @@ void Runtime::processing_loop()
                 result.frame = std::move(frame);
 
                 result.detections = std::move(detections);
-                    
+
                 (void)display_queue_.push(std::move(result));
             }
         }
@@ -208,7 +213,7 @@ void Runtime::processing_loop()
 
         return;
     }
-    
+
 
     const auto end_time = std::chrono::steady_clock::now();
 
@@ -274,6 +279,44 @@ void Runtime::processing_loop()
         Logger::info("[Processing] Capture-to-Process P99: " + std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
     }
 
+    if (!detection_timings.empty())
+    {
+        std::vector<double> preprocess_ms;
+        std::vector<double> inference_ms;
+        std::vector<double> postprocess_ms;
+
+        for (const auto& t : detection_timings)
+        {
+            preprocess_ms.push_back(t.preprocess_ms);
+            inference_ms.push_back(t.inference_ms);
+            postprocess_ms.push_back(t.postprocess_ms);
+        }
+
+        // TODO 1：统一统计并输出 Mean / P50 / P95 / P99
+        auto log_stats = [](const std::string& stage, const std::vector<double>& values)
+        {
+            if (values.empty())
+            {
+                return;
+            }
+
+            const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
+
+            Logger::info("[Processing] " + stage + " Mean: " + std::to_string(mean) + " ms");
+
+            Logger::info("[Processing] " + stage + " P50: " + std::to_string(percentile(values, 0.50)) + " ms");
+
+            Logger::info("[Processing] " + stage + " P95: " + std::to_string(percentile(values, 0.95)) + " ms");
+
+            Logger::info("[Processing] " + stage + " P99: " + std::to_string(percentile(values, 0.99)) + " ms");
+        };
+
+        // TODO 2：统计三个阶段
+        log_stats("Preprocess", preprocess_ms);
+        log_stats("Inference", inference_ms);
+        log_stats("Postprocess", postprocess_ms);
+    }
+
     display_queue_.close();
     display_finished_.store(true);
 }
@@ -296,7 +339,7 @@ void Runtime::capture_loop()
         {
             Logger::error("Received an empty frame");
             exit_code_.store(3);
-            stop(); 
+            stop();
             return;
         }
 
@@ -308,12 +351,12 @@ void Runtime::capture_loop()
 
         if(!frame_queue_.push(std::move(frame)))
         {
-            break; 
+            break;
         }
 
         ++captured_frames;
     }
-    
+
     // 判断是否为实时输入源读取失败（camera）
     const bool live_source_failed = !stop_requested_.load() && source_->is_live();
     if (live_source_failed)
@@ -329,7 +372,7 @@ void Runtime::capture_loop()
     {
         if(stop_requested_.load())
         {
-            Logger::info("[Capture] Stop requested");           
+            Logger::info("[Capture] Stop requested");
         }
         // video
         else if(!live_source_failed)
@@ -348,7 +391,7 @@ void Runtime::capture_loop()
     const double capture_fps = static_cast<double>(captured_frames) / elapsed_seconds;
 
     Logger::info(std::string("[Capture] Elapsed time: ") + std::to_string(elapsed_seconds) + 's');
-    Logger::info("[Capture] Frames captured: " + std::to_string(captured_frames)); 
+    Logger::info("[Capture] Frames captured: " + std::to_string(captured_frames));
     Logger::info(std::string("[Capture] Capture FPS: ") + std::to_string(capture_fps));
     Logger::info(std::string("[Capture] Peak_Queue_Size: ") + std::to_string(peak_queue_size));
 

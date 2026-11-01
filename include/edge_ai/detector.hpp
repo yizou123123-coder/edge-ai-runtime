@@ -11,6 +11,13 @@
 namespace edge_ai
 {
 
+struct DetectionTiming
+{
+    double preprocess_ms{0.0};
+    double inference_ms{0.0};
+    double postprocess_ms{0.0};
+};
+
 class OnnxDetector
 {
 public:
@@ -19,7 +26,7 @@ public:
                           double nms_iou_threshold = 0.45,
                           int intra_op_threads = 0);
 
-    std::vector<Detection> detect(const cv::Mat& frame);
+    std::vector<Detection> detect(const cv::Mat& frame, DetectionTiming* timing = nullptr);
 
 private:
     Ort::Env env_;

@@ -55,7 +55,7 @@ OnnxDetector::OnnxDetector(const std::string& model_path, double confidence_thre
 }
 
 
-std::vector<Detection> OnnxDetector::detect(const cv::Mat& frame)
+std::vector<Detection> OnnxDetector::detect(const cv::Mat& frame, DetectionTiming* timing)
 {
     using Clock = std::chrono::steady_clock;
     if (frame.empty())
@@ -131,11 +131,12 @@ std::vector<Detection> OnnxDetector::detect(const cv::Mat& frame)
     const double infer_ms = std::chrono::duration<double, std::milli>(infer_end - infer_start).count();
     const double post_ms = std::chrono::duration<double, std::milli>(post_end - post_start).count();
 
-    // TODO 2：打印三个阶段的耗时
-    std::cout << "[Timing] "
-            << "Preprocess: " << pre_ms << " ms, "
-            << "Inference: " << infer_ms << " ms, "
-            << "Postprocess: " << post_ms << " ms\n";
+    if (timing != nullptr)
+    {
+        timing->preprocess_ms = pre_ms;
+        timing->inference_ms = infer_ms;
+        timing->postprocess_ms = post_ms;
+    }
 
     return detections;
 }
