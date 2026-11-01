@@ -39,13 +39,15 @@ void validate_config(const RuntimeConfig& config)
         throw std::invalid_argument("nms_iou_threshold error");
     }
 
-
-    // TODO 4：
-    // 验证 camera_index
-    // 必须大于等于 0
     if (config.source.camera_index < 0)
     {
         throw std::invalid_argument("camera_index error");
+    }
+
+    // ORT 线程数：0 表示使用默认配置
+    if (config.intra_op.intra_op_threads < 0)
+    {
+        throw std::invalid_argument("intra_op_threads must be >= 0");
     }
     
 }
@@ -172,10 +174,20 @@ RuntimeConfig load_config(const std::string& path)
     }
 
     validate_config(config);
-    // 10. 返回配置
+
+    // 10. InferenceConfig 字段映射
+    const YAML::Node inference_node = root["inference"];
+
+    if (inference_node)
+    {
+        if (inference_node["intra_op_threads"])
+        {
+            config.intra_op.intra_op_threads = inference_node["intra_op_threads"].as<int>();
+        }
+    }
+
+    // 11. 返回配置
     return config;
-
-
 }
 
 }// namespace edge_ai

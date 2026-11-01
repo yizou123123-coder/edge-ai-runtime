@@ -14,7 +14,10 @@ namespace edge_ai
 class OnnxDetector
 {
 public:
-    explicit OnnxDetector(const std::string& model_path, double confidence_threshold = 0.25, double nms_iou_threshold = 0.45);
+    explicit OnnxDetector(const std::string& model_path,
+                          double confidence_threshold = 0.25,
+                          double nms_iou_threshold = 0.45,
+                          int intra_op_threads = 0);
 
     std::vector<Detection> detect(const cv::Mat& frame);
 

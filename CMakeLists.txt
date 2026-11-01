@@ -1,27 +1,85 @@
 cmake_minimum_required(VERSION 3.20)
+
 project(edge_ai_runtime LANGUAGES CXX)
+enable_testing()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# 寻找外部第三方依赖
+# ============================================================
+# 1. Build Options
+# ============================================================
+
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+
+if(ENABLE_ASAN)
+    message(STATUS "AddressSanitizer: ENABLED")
+
+    add_compile_options(
+        -fsanitize=address
+        -fno-omit-frame-pointer
+    )
+
+    add_link_options(
+        -fsanitize=address
+    )
+endif()
+
+# ASan 和 TSan 不能同时开启
+if(ENABLE_ASAN AND ENABLE_TSAN)
+    message(FATAL_ERROR "ASan and TSan cannot be enabled together")
+endif()
+
+if(ENABLE_TSAN)
+    message(STATUS "ThreadSanitizer: ENABLED")
+
+    add_compile_options(
+        -fsanitize=thread
+        -fno-omit-frame-pointer
+    )
+
+    add_link_options(
+        -fsanitize=thread
+    )
+endif()
+
+
+# ============================================================
+# 2. Dependencies
+# ============================================================
+
 find_package(OpenCV REQUIRED COMPONENTS
     core
     imgproc
     highgui
     videoio
 )
+
 find_package(Threads REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 
 set(ONNXRUNTIME_ROOT
-    ${PROJECT_SOURCE_DIR}/third_party/onnxruntime
+    "${PROJECT_SOURCE_DIR}/third_party/onnxruntime"
+)
+
+add_library(onnxruntime SHARED IMPORTED)
+
+set_target_properties(onnxruntime PROPERTIES
+    IMPORTED_LOCATION
+        "${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so"
+
+    INTERFACE_INCLUDE_DIRECTORIES
+        "${ONNXRUNTIME_ROOT}/include"
 )
 
 
-# 打包核心功能库（edge_runtime_core） 
-# 1. 创建核心库（把这3个.cpp打包成一个库）
+# ============================================================
+# 3. Core Library
+# ============================================================
+
 add_library(edge_runtime_core
     src/logger.cpp
     src/video_source.cpp
+    src/camera_source.cpp
     src/runtime.cpp
     src/preprocess.cpp
     src/postprocess.cpp
@@ -30,305 +88,167 @@ add_library(edge_runtime_core
     src/config_loader.cpp
 )
 
-# 2. 规定编译必须启用 C++17 特性
-target_compile_features(edge_runtime_core PUBLIC cxx_std_17)
+target_compile_features(edge_runtime_core
+    PUBLIC cxx_std_17
+)
 
-# 3. 指定去哪里找头文件（include 目录以及 OpenCV 的头文件目录）
 target_include_directories(edge_runtime_core
     PUBLIC
-        ${PROJECT_SOURCE_DIR}/include
+        "${PROJECT_SOURCE_DIR}/include"
         ${OpenCV_INCLUDE_DIRS}
 )
 
-# 4. 把外部依赖链接进这个核心库
 target_link_libraries(edge_runtime_core
     PUBLIC
         ${OpenCV_LIBS}
         Threads::Threads
         onnxruntime
+
+    PRIVATE
+        yaml-cpp::yaml-cpp
 )
 
 
-# 构建正式运行程序（edge_runtime）
+# ============================================================
+# 4. Main Application
+# ============================================================
+
 add_executable(edge_runtime
     app/main.cpp
 )
-target_compile_features(edge_runtime PRIVATE cxx_std_17)
+
 target_link_libraries(edge_runtime
-    PRIVATE
-        edge_runtime_core
+    PRIVATE edge_runtime_core
 )
 
 
-# 构建两个独立的测试程序
+# ============================================================
+# 5. Test Helper
+# ============================================================
+# 测试视频路径，由 CMake 配置参数提供
+set(TEST_VIDEO_PATH "" CACHE FILEPATH "Video path for CTest")
+
+# 需要视频路径参数的测试
+set(VIDEO_ARG_TESTS
+    inference_benchmark
+    video_source_pacing_test
+    runtime_frame_source_test
+    frame_source_factory_test
+    detector_threshold_test
+)
+# 适用于链接 edge_runtime_core 的测试
+function(add_core_test target_name)
+
+    add_executable(${target_name}
+        "tests/${target_name}.cpp"
+    )
+
+    target_link_libraries(${target_name}
+        PRIVATE edge_runtime_core
+    )
+
+
+    if(target_name IN_LIST VIDEO_ARG_TESTS)
+        add_test(
+            NAME ${target_name}
+            COMMAND $<TARGET_FILE:${target_name}> "${TEST_VIDEO_PATH}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    else()
+        add_test(
+            NAME ${target_name}
+            COMMAND $<TARGET_FILE:${target_name}>
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+endfunction()
+
+
+# ============================================================
+# 6. Core Tests
+# ============================================================
+
+foreach(test_name IN ITEMS
+    runtime_lifecycle_test
+    preprocess_test
+    onnx_inference_test
+    postprocess_test
+    coordinate_restore_test
+    inference_benchmark
+    video_source_pacing_test
+    drop_oldest_test
+    latest_frame_test
+    queue_policy_concurrency_test
+    camera_source_test
+    runtime_frame_source_test
+    runtime_live_source_failure_test
+    config_loader_test
+    config_validation_test
+    config_startup_test
+    frame_source_factory_test
+    runtime_queue_capacity_test
+    runtime_parameters_test
+    detector_threshold_test
+    display_queue_test
+)
+    add_core_test(${test_name})
+endforeach()
+
+# 保留原有测试程序的 ONNX Runtime RPATH
+set_target_properties(onnx_inference_test PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_ROOT}/lib"
+)
+
+
+# ============================================================
+# 7. Standalone Tests
+# ============================================================
+
+# BlockingQueue: 不依赖 Core Library
 add_executable(blocking_queue_test
     tests/blocking_queue_test.cpp
 )
-target_compile_features(
-    blocking_queue_test
-    PRIVATE
-        cxx_std_17
-)
-target_include_directories(
-    blocking_queue_test
-    PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
-)
-target_link_libraries(
-    blocking_queue_test
-    PRIVATE
-        Threads::Threads
-)
 
-
-add_executable(runtime_lifecycle_test
-    tests/runtime_lifecycle_test.cpp
-)
-target_compile_features(
-    runtime_lifecycle_test
-    PRIVATE
-        cxx_std_17
-)
-target_link_libraries(runtime_lifecycle_test
-    PRIVATE
-        edge_runtime_core
-)
-
-# onnx测试程序
-add_library(onnxruntime SHARED IMPORTED)
-set_target_properties(
-    onnxruntime
-    PROPERTIES
-        IMPORTED_LOCATION
-            ${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so
-        INTERFACE_INCLUDE_DIRECTORIES
-            ${ONNXRUNTIME_ROOT}/include
-
-)
-
-add_executable(onnx_session_test
-    tests/onnx_session_test.cpp
-)
-target_compile_features(onnx_session_test
-    PRIVATE
-        cxx_std_17
-)
-target_link_libraries(onnx_session_test
-    PRIVATE
-        onnxruntime 
-)
-set_target_properties(onnx_session_test
-    PROPERTIES
-        BUILD_RPATH
-            ${ONNXRUNTIME_ROOT}/lib
-)
-
-# 预处理测试程序
-add_executable(preprocess_test
-    tests/preprocess_test.cpp
-)
-
-target_compile_features(preprocess_test
-    PRIVATE
-        cxx_std_17
-)
-
-target_link_libraries(preprocess_test
-    PRIVATE
-        edge_runtime_core
-)
-
-# 测试run
-add_executable(onnx_inference_test
-    tests/onnx_inference_test.cpp
-)
-target_compile_features(onnx_inference_test
-    PRIVATE
-        cxx_std_17
-)
-target_link_libraries(onnx_inference_test
-    PRIVATE
-        edge_runtime_core
-        onnxruntime
-)
-set_target_properties(onnx_inference_test
-    PROPERTIES
-        BUILD_RPATH
-            ${ONNXRUNTIME_ROOT}/lib
-)
-
-# 测试后处理
-add_executable(postprocess_test
-    tests/postprocess_test.cpp
-)
-
-target_compile_features(postprocess_test
+target_compile_features(blocking_queue_test
     PRIVATE cxx_std_17
 )
 
-target_link_libraries(postprocess_test
-    PRIVATE edge_runtime_core
-)
-# 3.6 test
-add_executable(
-    coordinate_restore_test
-    tests/coordinate_restore_test.cpp
+target_include_directories(blocking_queue_test
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
 )
 
-target_link_libraries(
-    coordinate_restore_test
-    PRIVATE edge_runtime_core
-)
-# 3.7 test
-add_executable(
-    inference_benchmark
-    tests/inference_benchmark.cpp
+target_link_libraries(blocking_queue_test
+    PRIVATE Threads::Threads
 )
 
-target_link_libraries(
-    inference_benchmark
-    PRIVATE edge_runtime_core
+
+# ONNX Runtime Session
+add_executable(onnx_session_test
+    tests/onnx_session_test.cpp
 )
 
-add_executable(
-    video_source_pacing_test
-    tests/video_source_pacing_test.cpp
+target_compile_features(onnx_session_test
+    PRIVATE cxx_std_17
 )
 
-target_link_libraries(
-    video_source_pacing_test
-    PRIVATE edge_runtime_core
+target_link_libraries(onnx_session_test
+    PRIVATE onnxruntime
 )
 
-add_executable(
-    drop_oldest_test
-    tests/drop_oldest_test.cpp
+set_target_properties(onnx_session_test PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_ROOT}/lib"
 )
 
-target_link_libraries(
-    drop_oldest_test
-    PRIVATE edge_runtime_core
-)
 
-add_executable(
-    latest_frame_test
-    tests/latest_frame_test.cpp
-)
-
-target_link_libraries(
-    latest_frame_test
-    PRIVATE edge_runtime_core
-)
-add_executable(
-    queue_policy_concurrency_test
-    tests/queue_policy_concurrency_test.cpp
-)
-
-target_link_libraries(
-    queue_policy_concurrency_test
-    PRIVATE edge_runtime_core
-)
-
-target_sources(edge_runtime_core PRIVATE
-    src/camera_source.cpp
-)
-add_executable(camera_source_test
-    tests/camera_source_test.cpp
-)
-
-target_link_libraries(camera_source_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(runtime_frame_source_test
-    tests/runtime_frame_source_test.cpp
-)
-
-target_link_libraries(runtime_frame_source_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(runtime_live_source_failure_test
-    tests/runtime_live_source_failure_test.cpp
-)
-
-target_link_libraries(runtime_live_source_failure_test
-    PRIVATE edge_runtime_core
-)
-
+# YAML Parser
 add_executable(yaml_smoke_test
     tests/yaml_smoke_test.cpp
 )
 
+target_compile_features(yaml_smoke_test
+    PRIVATE cxx_std_17
+)
+
 target_link_libraries(yaml_smoke_test
     PRIVATE yaml-cpp::yaml-cpp
-)
-
-target_link_libraries(edge_runtime_core
-    PRIVATE yaml-cpp::yaml-cpp
-)
-
-add_executable(config_loader_test
-    tests/config_loader_test.cpp
-)
-
-target_link_libraries(config_loader_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(config_validation_test
-    tests/config_validation_test.cpp
-)
-
-target_link_libraries(config_validation_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(config_startup_test
-    tests/config_startup_test.cpp
-)
-
-target_link_libraries(config_startup_test
-    PRIVATE edge_runtime_core
-)
-
-
-add_executable(frame_source_factory_test
-    tests/frame_source_factory_test.cpp
-)
-
-target_link_libraries(frame_source_factory_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(runtime_queue_capacity_test
-    tests/runtime_queue_capacity_test.cpp
-)
-
-target_link_libraries(runtime_queue_capacity_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(runtime_parameters_test
-    tests/runtime_parameters_test.cpp
-)
-
-target_link_libraries(runtime_parameters_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(detector_threshold_test
-    tests/detector_threshold_test.cpp
-)
-
-target_link_libraries(detector_threshold_test
-    PRIVATE edge_runtime_core
-)
-
-add_executable(display_queue_test
-    tests/display_queue_test.cpp
-)
-
-target_link_libraries(display_queue_test
-    PRIVATE edge_runtime_core
 )

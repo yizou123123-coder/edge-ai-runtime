@@ -28,7 +28,8 @@ public:
                      double deadline_ms = 100.0,
                      double confidence_threshold = 0.25,
                      double nms_iou_threshold = 0.45,
-                     bool display_enabled = false);
+                     bool display_enabled = false,
+                     int intra_op_threads = 0);
 
     ~Runtime();
 
@@ -69,6 +70,8 @@ private:
     double nms_iou_threshold_{0.45};
 
     bool display_enabled_{false};
+
+    int intra_op_threads_{0};
 
     // 仅供显示使用，不影响原 FrameQueue
     BlockingQueue<InferenceResult> display_queue_{1, QueuePolicy::LatestFrame};

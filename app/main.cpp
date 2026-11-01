@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
 
             auto source = edge_ai::create_frame_source(config.source);
 
-            edge_ai::Runtime runtime(std::move(source), config.runtime.queue_policy, config.runtime.queue_capacity, config.model.path,
-                            config.runtime.deadline_ms, config.model.confidence_threshold, config.model.nms_iou_threshold, config.display.enabled);
+            edge_ai::Runtime runtime(std::move(source), config.runtime.queue_policy, config.runtime.queue_capacity, config.model.path, config.runtime.deadline_ms,
+                                     config.model.confidence_threshold, config.model.nms_iou_threshold, config.display.enabled, config.intra_op.intra_op_threads);
 
             if (!runtime.start())
             {

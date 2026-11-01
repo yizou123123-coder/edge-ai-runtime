@@ -16,14 +16,15 @@ namespace edge_ai
 {
 // 通用
 Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy, std::size_t queue_capacity, std::string model_path, double deadline_ms,
-                 double confidence_threshold, double nms_iou_threshold, bool display_enabled)
+                 double confidence_threshold, double nms_iou_threshold, bool display_enabled, int intra_op_threads)
     : source_(std::move(source)),
       frame_queue_(queue_capacity, policy),
       model_path_(std::move(model_path)),
       deadline_ms_(deadline_ms),
       confidence_threshold_(confidence_threshold),
       nms_iou_threshold_(nms_iou_threshold),
-      display_enabled_(display_enabled)
+      display_enabled_(display_enabled),
+      intra_op_threads_(intra_op_threads)
 {
     if (source_ == nullptr)
     {
@@ -151,12 +152,18 @@ void Runtime::processing_loop()
     std::size_t processed_frames = 0;
     const auto start_time = std::chrono::steady_clock::now();
     std::vector<double> frame_ages_ms; // 每一帧处理时间组成动态数组
+    std::vector<double> pre_process_ages_ms;
     std::size_t deadline_misses = 0;   // 处理帧超时的数量
     try
     {
-        OnnxDetector detector(model_path_, confidence_threshold_, nms_iou_threshold_);
+        Logger::info("[Processing] ORT intra-op threads: " + std::to_string(intra_op_threads_));
+        OnnxDetector detector(model_path_, confidence_threshold_, nms_iou_threshold_, intra_op_threads_);
         while (frame_queue_.pop(frame))
         {
+            const auto process_start = std::chrono::steady_clock::now();
+            const double pre_process_age_ms = std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
+            pre_process_ages_ms.push_back(pre_process_age_ms);
+
             auto detections = detector.detect(frame.image);
             const auto output_at = std::chrono::steady_clock::now();
             const double frame_age_ms = std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
@@ -256,6 +263,15 @@ void Runtime::processing_loop()
         Logger::info("[Processing] On-time Rate: " + std::to_string(on_time_rate) + "%");
 
         Logger::info("[Processing] Queue Drop Rate: " + std::to_string(queue_drop_rate) + "%");
+    }
+
+    if (!pre_process_ages_ms.empty())
+    {
+        Logger::info("[Processing] Capture-to-Process P50: " + std::to_string(percentile(pre_process_ages_ms, 0.50)) + " ms");
+
+        Logger::info("[Processing] Capture-to-Process P95: " + std::to_string(percentile(pre_process_ages_ms, 0.95)) + " ms");
+
+        Logger::info("[Processing] Capture-to-Process P99: " + std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
     }
 
     display_queue_.close();

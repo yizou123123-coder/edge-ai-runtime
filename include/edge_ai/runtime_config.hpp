@@ -50,6 +50,12 @@ struct DisplayConfig
     bool enabled{false};
 };
 
+// 5. ORT内部线程数量
+struct InferenceConfig
+{
+    int intra_op_threads{0};
+};
+
 
 // 5. 总配置
 struct RuntimeConfig
@@ -58,6 +64,7 @@ struct RuntimeConfig
     RuntimeOptions runtime{};
     ModelConfig model{};
     DisplayConfig display{};
+    InferenceConfig intra_op{};
 };
 
 } // namespace edge_ai
