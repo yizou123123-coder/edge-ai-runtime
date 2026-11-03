@@ -1,0 +1,51 @@
+name: C++ CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-x86:
+    runs-on: ubuntu-24.04
+
+    env:
+      # 必须替换为本机实际使用的 ORT 版本
+      ORT_VERSION: "1.30.0"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake \
+            libopencv-dev libyaml-cpp-dev
+
+      - name: Install ONNX Runtime
+        run: |
+          set -euo pipefail
+
+          curl -fL --retry 3 \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz" \
+            -o /tmp/ort.tgz
+
+          tar -xzf /tmp/ort.tgz -C /tmp
+          mkdir -p third_party
+
+          mv "/tmp/onnxruntime-linux-x64-${ORT_VERSION}" \
+             third_party/onnxruntime
+
+      - name: Configure and build
+        run: ./scripts/build.sh x86-release
+
+      - name: Run unit tests
+        run: |
+          ctest --test-dir build/release \
+            -R '^(preprocess_test|postprocess_test|coordinate_restore_test|drop_oldest_test|latest_frame_test|queue_policy_concurrency_test)$' \
+            --output-on-failure
