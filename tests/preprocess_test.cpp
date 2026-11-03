@@ -1,31 +1,13 @@
 #include <edge_ai/preprocess.hpp>
 
-#include <opencv2/videoio.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <string>
+#include <opencv2/core.hpp>
 
 int main()
 {
-    const std::string video_path = "/home/yizou/datasets/edge-ai-runtime/test.mp4";
-
-    cv::VideoCapture cap(video_path);
-
-    if(!cap.isOpened())
-    {
-        std::cerr << "Failed to open video: " << video_path << '\n';
-        return 1;
-    }
-
-    cv::Mat frame;
-
-    if (!cap.read(frame) || frame.empty())
-    {
-        std::cerr << "Failed to read first frame from video\n";
-        return 1;
-    }
+    cv::Mat frame(480, 640, CV_8UC3, cv::Scalar(10, 20, 30));
     
     const auto result = edge_ai::preprocess_yolo(frame, 640, 640);
 
