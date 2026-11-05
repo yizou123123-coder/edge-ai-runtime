@@ -4,7 +4,7 @@
 
 int main()
 {
-  
+
     // 创建环境
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "onnx_session_test");
 
@@ -21,19 +21,19 @@ int main()
 
     std::cout << "Input count: " << input_count << '\n';
     std::cout << "Output count: " << output_count << '\n';
-    
+
     // 创建一个 ONNX Runtime 默认的内存分配器对象（“内存管家”）,查询输入/输出节点的名字
     Ort::AllocatorWithDefaultOptions allocator;
 
     // 查询第 0 个输入节点的名称
-    auto input0 = session.GetInputNameAllocated(0, allocator); 
+    auto input0 = session.GetInputNameAllocated(0, allocator);
 
     // 获取第 0 个输入的类型信息
     auto input_type_info = session.GetInputTypeInfo(0);
     // 从类型信息中提取张量类型与形状描述
     auto input_tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
     // 获取具体的维度数值数组
-    const std::vector<int64_t> input_shape = input_tensor_info.GetShape(); 
+    const std::vector<int64_t> input_shape = input_tensor_info.GetShape();
 
     std::cout << "Input name: " << input0.get() << '\n';
     std::cout << "Input shape: ";

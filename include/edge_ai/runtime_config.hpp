@@ -15,7 +15,6 @@ enum class SourceType
     Camera
 };
 
-
 // 1. 输入源配置
 struct SourceConfig
 {
@@ -25,7 +24,6 @@ struct SourceConfig
     double target_fps{30.0};
 };
 
-
 // 2. Runtime 运行参数
 struct RuntimeOptions
 {
@@ -34,7 +32,6 @@ struct RuntimeOptions
     double deadline_ms{100.0};
 };
 
-
 // 3. 模型配置
 struct ModelConfig
 {
@@ -42,7 +39,6 @@ struct ModelConfig
     double confidence_threshold{0.25};
     double nms_iou_threshold{0.45};
 };
-
 
 // 4. 显示配置
 struct DisplayConfig
@@ -55,7 +51,6 @@ struct InferenceConfig
 {
     int intra_op_threads{0};
 };
-
 
 // 5. 总配置
 struct RuntimeConfig

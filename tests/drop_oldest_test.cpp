@@ -7,7 +7,7 @@
 using edge_ai::BlockingQueue;
 using edge_ai::QueuePolicy;
 
-void require(bool condition, const char* message)
+void require(bool condition, const char *message)
 {
     if (!condition)
     {
@@ -84,7 +84,7 @@ void test_zero_capacity()
     {
         BlockingQueue<int> queue(0, QueuePolicy::DropOldest);
     }
-    catch (const std::invalid_argument&)
+    catch (const std::invalid_argument &)
     {
         threw = true;
     }
@@ -105,7 +105,7 @@ int main()
         std::cout << "DropOldest tests: ALL PASS\n";
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "[FAIL] " << e.what() << '\n';
         return 1;

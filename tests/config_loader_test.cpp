@@ -15,15 +15,12 @@ namespace fs = std::filesystem;
 
 class TempYaml
 {
-public:
+  public:
     TempYaml()
     {
-        const auto id = std::chrono::steady_clock::now()
-                            .time_since_epoch().count();
+        const auto id = std::chrono::steady_clock::now().time_since_epoch().count();
 
-        path_ = fs::temp_directory_path() /
-            ("edge_ai_config_test_" +
-             std::to_string(id) + ".yaml");
+        path_ = fs::temp_directory_path() / ("edge_ai_config_test_" + std::to_string(id) + ".yaml");
     }
 
     ~TempYaml()
@@ -32,10 +29,10 @@ public:
         fs::remove(path_, ec);
     }
 
-    TempYaml(const TempYaml&) = delete;
-    TempYaml& operator=(const TempYaml&) = delete;
+    TempYaml(const TempYaml &) = delete;
+    TempYaml &operator=(const TempYaml &) = delete;
 
-    void write(const std::string& content)
+    void write(const std::string &content)
     {
         std::ofstream out(path_, std::ios::trunc);
 
@@ -49,57 +46,43 @@ public:
             throw std::runtime_error("Cannot write test YAML");
     }
 
-    std::string path() const
-    {
-        return path_.string();
-    }
+    std::string path() const { return path_.string(); }
 
-private:
+  private:
     fs::path path_;
 };
 
-void require(bool condition, const std::string& message)
+void require(bool condition, const std::string &message)
 {
     if (!condition)
         throw std::runtime_error(message);
 }
 
-bool approx(double a, double b)
-{
-    return std::fabs(a - b) < 1e-9;
-}
+bool approx(double a, double b) { return std::fabs(a - b) < 1e-9; }
 
 // Test 1~3: 合法枚举
-void test_valid_enum(
-    TempYaml& file,
-    const std::string& source_name,
-    const std::string& policy_name,
-    edge_ai::SourceType expected_source,
-    edge_ai::QueuePolicy expected_policy)
+void test_valid_enum(TempYaml &file, const std::string &source_name, const std::string &policy_name,
+                     edge_ai::SourceType expected_source, edge_ai::QueuePolicy expected_policy)
 {
-    file.write(
-        "source:\n"
-        "  type: " + source_name + "\n"
-        "runtime:\n"
-        "  queue_policy: " + policy_name + "\n"
-    );
+    file.write("source:\n"
+               "  type: " +
+               source_name +
+               "\n"
+               "runtime:\n"
+               "  queue_policy: " +
+               policy_name + "\n");
 
     const auto config = edge_ai::load_config(file.path());
 
-    require(config.source.type == expected_source,
-            "SourceType mismatch");
+    require(config.source.type == expected_source, "SourceType mismatch");
 
-    require(config.runtime.queue_policy == expected_policy,
-            "QueuePolicy mismatch");
+    require(config.runtime.queue_policy == expected_policy, "QueuePolicy mismatch");
 
-    std::cout << "[PASS] " << source_name
-              << " + " << policy_name << '\n';
+    std::cout << "[PASS] " << source_name << " + " << policy_name << '\n';
 }
 
 // Test 4~5: 非法枚举
-void test_invalid_enum(
-    TempYaml& file,
-    const std::string& content)
+void test_invalid_enum(TempYaml &file, const std::string &content)
 {
     file.write(content);
 
@@ -109,7 +92,7 @@ void test_invalid_enum(
     {
         (void)edge_ai::load_config(file.path());
     }
-    catch (const std::invalid_argument&)
+    catch (const std::invalid_argument &)
     {
         rejected = true;
     }
@@ -119,7 +102,7 @@ void test_invalid_enum(
 }
 
 // Test 6: Source / Runtime 字段覆盖
-void test_field_overrides(TempYaml& file)
+void test_field_overrides(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -136,27 +119,20 @@ runtime:
 
     const auto c = edge_ai::load_config(file.path());
 
-    require(c.source.type == edge_ai::SourceType::Camera,
-            "Source type override failed");
-    require(c.source.video_path == "custom/test.mp4",
-            "Video path override failed");
-    require(c.source.camera_index == 2,
-            "Camera index override failed");
-    require(approx(c.source.target_fps, 25.0),
-            "Target FPS override failed");
-    require(c.runtime.queue_policy ==
-                edge_ai::QueuePolicy::DropOldest,
+    require(c.source.type == edge_ai::SourceType::Camera, "Source type override failed");
+    require(c.source.video_path == "custom/test.mp4", "Video path override failed");
+    require(c.source.camera_index == 2, "Camera index override failed");
+    require(approx(c.source.target_fps, 25.0), "Target FPS override failed");
+    require(c.runtime.queue_policy == edge_ai::QueuePolicy::DropOldest,
             "Queue policy override failed");
-    require(c.runtime.queue_capacity == 8,
-            "Queue capacity override failed");
-    require(approx(c.runtime.deadline_ms, 75.5),
-            "Deadline override failed");
+    require(c.runtime.queue_capacity == 8, "Queue capacity override failed");
+    require(approx(c.runtime.deadline_ms, 75.5), "Deadline override failed");
 
     std::cout << "[PASS] Source/Runtime field overrides\n";
 }
 
 // Test 7: Source / Runtime 默认值
-void test_default_values(TempYaml& file)
+void test_default_values(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -168,27 +144,19 @@ runtime:
 
     const auto c = edge_ai::load_config(file.path());
 
-    require(c.source.type == edge_ai::SourceType::Video,
-            "Default source type mismatch");
-    require(c.source.video_path.empty(),
-            "Default video path mismatch");
-    require(c.source.camera_index == 0,
-            "Default camera index mismatch");
-    require(approx(c.source.target_fps, 30.0),
-            "Default FPS mismatch");
-    require(c.runtime.queue_policy ==
-                edge_ai::QueuePolicy::Blocking,
-            "Queue policy mismatch");
-    require(c.runtime.queue_capacity == 4,
-            "Default capacity mismatch");
-    require(approx(c.runtime.deadline_ms, 100.0),
-            "Default deadline mismatch");
+    require(c.source.type == edge_ai::SourceType::Video, "Default source type mismatch");
+    require(c.source.video_path.empty(), "Default video path mismatch");
+    require(c.source.camera_index == 0, "Default camera index mismatch");
+    require(approx(c.source.target_fps, 30.0), "Default FPS mismatch");
+    require(c.runtime.queue_policy == edge_ai::QueuePolicy::Blocking, "Queue policy mismatch");
+    require(c.runtime.queue_capacity == 4, "Default capacity mismatch");
+    require(approx(c.runtime.deadline_ms, 100.0), "Default deadline mismatch");
 
     std::cout << "[PASS] Source/Runtime defaults\n";
 }
 
 // Test 8: 数字类型错误
-void test_invalid_numeric_type(TempYaml& file)
+void test_invalid_numeric_type(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -205,7 +173,7 @@ runtime:
     {
         (void)edge_ai::load_config(file.path());
     }
-    catch (const YAML::BadConversion&)
+    catch (const YAML::BadConversion &)
     {
         rejected = true;
     }
@@ -215,7 +183,7 @@ runtime:
 }
 
 // Test 9: Model / Display 字段覆盖
-void test_model_display_overrides(TempYaml& file)
+void test_model_display_overrides(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -235,20 +203,16 @@ display:
 
     const auto c = edge_ai::load_config(file.path());
 
-    require(c.model.path == "models/custom.onnx",
-            "Model path override failed");
-    require(approx(c.model.confidence_threshold, 0.65),
-            "Confidence override failed");
-    require(approx(c.model.nms_iou_threshold, 0.30),
-            "NMS IoU override failed");
-    require(c.display.enabled,
-            "Display enabled override failed");
+    require(c.model.path == "models/custom.onnx", "Model path override failed");
+    require(approx(c.model.confidence_threshold, 0.65), "Confidence override failed");
+    require(approx(c.model.nms_iou_threshold, 0.30), "NMS IoU override failed");
+    require(c.display.enabled, "Display enabled override failed");
 
     std::cout << "[PASS] Model/Display field overrides\n";
 }
 
 // Test 10: 完全省略 Model / Display
-void test_model_display_defaults(TempYaml& file)
+void test_model_display_defaults(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -260,20 +224,16 @@ runtime:
 
     const auto c = edge_ai::load_config(file.path());
 
-    require(c.model.path == "models/yolov8n.onnx",
-            "Default model path mismatch");
-    require(approx(c.model.confidence_threshold, 0.25),
-            "Default confidence mismatch");
-    require(approx(c.model.nms_iou_threshold, 0.45),
-            "Default NMS mismatch");
-    require(!c.display.enabled,
-            "Default display must be disabled");
+    require(c.model.path == "models/yolov8n.onnx", "Default model path mismatch");
+    require(approx(c.model.confidence_threshold, 0.25), "Default confidence mismatch");
+    require(approx(c.model.nms_iou_threshold, 0.45), "Default NMS mismatch");
+    require(!c.display.enabled, "Default display must be disabled");
 
     std::cout << "[PASS] Model/Display defaults\n";
 }
 
 // Test 11: Display 分组存在，但 enabled 缺失
-void test_empty_display_group(TempYaml& file)
+void test_empty_display_group(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -287,14 +247,13 @@ display: {}
 
     const auto c = edge_ai::load_config(file.path());
 
-    require(!c.display.enabled,
-            "Missing display.enabled should keep default");
+    require(!c.display.enabled, "Missing display.enabled should keep default");
 
     std::cout << "[PASS] Empty display group defaults\n";
 }
 
 // Test 12: Display 布尔类型错误
-void test_invalid_display_bool(TempYaml& file)
+void test_invalid_display_bool(TempYaml &file)
 {
     file.write(R"(
 source:
@@ -313,7 +272,7 @@ display:
     {
         (void)edge_ai::load_config(file.path());
     }
-    catch (const YAML::BadConversion&)
+    catch (const YAML::BadConversion &)
     {
         rejected = true;
     }
@@ -329,39 +288,24 @@ int main()
     {
         TempYaml file;
 
-        test_valid_enum(
-            file, "video", "blocking",
-            edge_ai::SourceType::Video,
-            edge_ai::QueuePolicy::Blocking
-        );
+        test_valid_enum(file, "video", "blocking", edge_ai::SourceType::Video,
+                        edge_ai::QueuePolicy::Blocking);
 
-        test_valid_enum(
-            file, "camera", "drop_oldest",
-            edge_ai::SourceType::Camera,
-            edge_ai::QueuePolicy::DropOldest
-        );
+        test_valid_enum(file, "camera", "drop_oldest", edge_ai::SourceType::Camera,
+                        edge_ai::QueuePolicy::DropOldest);
 
-        test_valid_enum(
-            file, "video", "latest_frame",
-            edge_ai::SourceType::Video,
-            edge_ai::QueuePolicy::LatestFrame
-        );
+        test_valid_enum(file, "video", "latest_frame", edge_ai::SourceType::Video,
+                        edge_ai::QueuePolicy::LatestFrame);
 
-        test_invalid_enum(
-            file,
-            "source:\n"
-            "  type: microphone\n"
-            "runtime:\n"
-            "  queue_policy: latest_frame\n"
-        );
+        test_invalid_enum(file, "source:\n"
+                                "  type: microphone\n"
+                                "runtime:\n"
+                                "  queue_policy: latest_frame\n");
 
-        test_invalid_enum(
-            file,
-            "source:\n"
-            "  type: video\n"
-            "runtime:\n"
-            "  queue_policy: super_fast\n"
-        );
+        test_invalid_enum(file, "source:\n"
+                                "  type: video\n"
+                                "runtime:\n"
+                                "  queue_policy: super_fast\n");
 
         test_field_overrides(file);
         test_default_values(file);
@@ -375,7 +319,7 @@ int main()
         std::cout << "\nConfigLoader: ALL PASS\n";
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "[FAIL] " << e.what() << '\n';
         return 1;

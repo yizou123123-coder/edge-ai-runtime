@@ -20,15 +20,13 @@ struct DetectionTiming
 
 class OnnxDetector
 {
-public:
-    explicit OnnxDetector(const std::string& model_path,
-                          double confidence_threshold = 0.25,
-                          double nms_iou_threshold = 0.45,
-                          int intra_op_threads = 0);
+  public:
+    explicit OnnxDetector(const std::string &model_path, double confidence_threshold = 0.25,
+                          double nms_iou_threshold = 0.45, int intra_op_threads = 0);
 
-    std::vector<Detection> detect(const cv::Mat& frame, DetectionTiming* timing = nullptr);
+    std::vector<Detection> detect(const cv::Mat &frame, DetectionTiming *timing = nullptr);
 
-private:
+  private:
     Ort::Env env_;
     Ort::SessionOptions session_options_;
     Ort::Session session_;

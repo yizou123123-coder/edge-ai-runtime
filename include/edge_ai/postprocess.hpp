@@ -16,12 +16,8 @@ struct Detection
     cv::Rect2f box;
 };
 
-std::vector<Detection> postprocess_yolo(
-    const float* output_data,
-    std::size_t num_candidates,
-    const PreprocessResult& preprocess,
-    float confidence_threshold,
-    float nms_iou_threshold
-);
+std::vector<Detection> postprocess_yolo(const float *output_data, std::size_t num_candidates,
+                                        const PreprocessResult &preprocess,
+                                        float confidence_threshold, float nms_iou_threshold);
 
 } // namespace edge_ai

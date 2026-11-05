@@ -30,7 +30,6 @@ constexpr int kInputHeight = 640;
 constexpr float kConfidenceThreshold = 0.25F;
 constexpr float kNmsThreshold = 0.45F;
 
-
 // 一次完整处理产生的性能数据
 struct TimingSample
 {
@@ -41,14 +40,12 @@ struct TimingSample
     std::size_t detection_count = 0;
 };
 
-
 // 统计结果
 struct TimingStats
 {
     double mean_ms = 0.0;
     double p95_ms = 0.0;
 };
-
 
 // 计算 Mean 和 P95
 TimingStats calculate_stats(std::vector<double> times_ms)
@@ -67,11 +64,7 @@ TimingStats calculate_stats(std::vector<double> times_ms)
     }
 
     // 1. 计算平均耗时
-    const double sum = std::accumulate(
-        times_ms.begin(),
-        times_ms.end(),
-        0.0
-    );
+    const double sum = std::accumulate(times_ms.begin(), times_ms.end(), 0.0);
 
     const double mean = sum / static_cast<double>(times_ms.size());
 
@@ -81,25 +74,15 @@ TimingStats calculate_stats(std::vector<double> times_ms)
     // 3. 最近秩方法计算 P95
     // index = ceil(0.95 * N) - 1
     const std::size_t p95_index =
-        static_cast<std::size_t>(
-            std::ceil(0.95 * static_cast<double>(times_ms.size()))
-        ) - 1;
+        static_cast<std::size_t>(std::ceil(0.95 * static_cast<double>(times_ms.size()))) - 1;
 
-    return TimingStats{
-        mean,
-        times_ms[p95_index]
-    };
+    return TimingStats{mean, times_ms[p95_index]};
 }
 
-
 // 执行一次完整的单帧推理流程
-TimingSample run_one_frame(
-    Ort::Session& session,
-    const cv::Mat& frame,
-    const std::string& input_name,
-    const std::string& output_name,
-    const Ort::MemoryInfo& memory_info
-)
+TimingSample run_one_frame(Ort::Session &session, const cv::Mat &frame,
+                           const std::string &input_name, const std::string &output_name,
+                           const Ort::MemoryInfo &memory_info)
 {
     // ========================================
     // Stage 1: Preprocess
@@ -107,11 +90,7 @@ TimingSample run_one_frame(
 
     const auto t0 = Clock::now();
 
-    auto preprocess_result = edge_ai::preprocess_yolo(
-        frame,
-        kInputWidth,
-        kInputHeight
-    );
+    auto preprocess_result = edge_ai::preprocess_yolo(frame, kInputWidth, kInputHeight);
 
     const auto t1 = Clock::now();
 
@@ -125,34 +104,18 @@ TimingSample run_one_frame(
     // Stage 2: Inference
     // ========================================
 
-    constexpr std::array<std::int64_t, 4> input_shape{
-        1, 3, kInputHeight, kInputWidth
-    };
+    constexpr std::array<std::int64_t, 4> input_shape{1, 3, kInputHeight, kInputWidth};
 
     auto input_tensor = Ort::Value::CreateTensor<float>(
-        memory_info,
-        preprocess_result.tensor_data.data(),
-        preprocess_result.tensor_data.size(),
-        input_shape.data(),
-        input_shape.size()
-    );
+        memory_info, preprocess_result.tensor_data.data(), preprocess_result.tensor_data.size(),
+        input_shape.data(), input_shape.size());
 
-    const char* input_names[] = {
-        input_name.c_str()
-    };
+    const char *input_names[] = {input_name.c_str()};
 
-    const char* output_names[] = {
-        output_name.c_str()
-    };
+    const char *output_names[] = {output_name.c_str()};
 
-    auto outputs = session.Run(
-        Ort::RunOptions{nullptr},
-        input_names,
-        &input_tensor,
-        1,
-        output_names,
-        1
-    );
+    auto outputs =
+        session.Run(Ort::RunOptions{nullptr}, input_names, &input_tensor, 1, output_names, 1);
 
     const auto t2 = Clock::now();
 
@@ -166,21 +129,17 @@ TimingSample run_one_frame(
         throw std::runtime_error("Invalid ONNX output");
     }
 
-    const auto output_info =
-        outputs[0].GetTensorTypeAndShapeInfo();
+    const auto output_info = outputs[0].GetTensorTypeAndShapeInfo();
 
     const auto output_shape = output_info.GetShape();
 
-    if (output_shape.size() != 3 ||
-        output_shape[0] != 1 ||
-        output_shape[1] != 84 ||
+    if (output_shape.size() != 3 || output_shape[0] != 1 || output_shape[1] != 84 ||
         output_shape[2] != 8400)
     {
         throw std::runtime_error("Unexpected output tensor shape");
     }
 
-    if (output_info.GetElementType() !=
-        ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT)
+    if (output_info.GetElementType() != ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT)
     {
         throw std::runtime_error("Unexpected output tensor dtype");
     }
@@ -192,24 +151,17 @@ TimingSample run_one_frame(
         throw std::runtime_error("Unexpected output element count");
     }
 
-    const float* output_data =
-        outputs[0].GetTensorData<float>();
+    const float *output_data = outputs[0].GetTensorData<float>();
 
     if (output_data == nullptr)
     {
         throw std::runtime_error("Null output tensor pointer");
     }
 
-    const std::size_t num_candidates =
-        static_cast<std::size_t>(output_shape[2]);
+    const std::size_t num_candidates = static_cast<std::size_t>(output_shape[2]);
 
     const auto detections = edge_ai::postprocess_yolo(
-        output_data,
-        num_candidates,
-        preprocess_result,
-        kConfidenceThreshold,
-        kNmsThreshold
-    );
+        output_data, num_candidates, preprocess_result, kConfidenceThreshold, kNmsThreshold);
 
     const auto t3 = Clock::now();
 
@@ -219,47 +171,29 @@ TimingSample run_one_frame(
 
     TimingSample sample;
 
-    sample.preprocess_ms =
-        std::chrono::duration<double, std::milli>(
-            t1 - t0
-        ).count();
+    sample.preprocess_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-    sample.inference_ms =
-        std::chrono::duration<double, std::milli>(
-            t2 - t1
-        ).count();
+    sample.inference_ms = std::chrono::duration<double, std::milli>(t2 - t1).count();
 
-    sample.postprocess_ms =
-        std::chrono::duration<double, std::milli>(
-            t3 - t2
-        ).count();
+    sample.postprocess_ms = std::chrono::duration<double, std::milli>(t3 - t2).count();
 
     sample.detection_count = detections.size();
 
     return sample;
 }
 
-
 // 打印某个阶段的性能统计
-void print_stats(
-    const std::string& name,
-    const TimingStats& stats
-)
+void print_stats(const std::string &name, const TimingStats &stats)
 {
-    std::cout
-        << std::left << std::setw(16) << name
-        << std::right << std::setw(14) << stats.mean_ms
-        << std::setw(14) << stats.p95_ms
-        << '\n';
+    std::cout << std::left << std::setw(16) << name << std::right << std::setw(14) << stats.mean_ms
+              << std::setw(14) << stats.p95_ms << '\n';
 }
 
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        std::cerr
-            << "Usage: inference_benchmark <video_path>\n";
+        std::cerr << "Usage: inference_benchmark <video_path>\n";
 
         return 1;
     }
@@ -277,18 +211,14 @@ int main(int argc, char* argv[])
 
         if (!capture.isOpened())
         {
-            throw std::runtime_error(
-                "Failed to open video: " + video_path
-            );
+            throw std::runtime_error("Failed to open video: " + video_path);
         }
 
         cv::Mat frame;
 
         if (!capture.read(frame) || frame.empty())
         {
-            throw std::runtime_error(
-                "Failed to read first video frame"
-            );
+            throw std::runtime_error("Failed to read first video frame");
         }
 
         capture.release();
@@ -297,35 +227,23 @@ int main(int argc, char* argv[])
         // 2. 初始化 ONNX Runtime（只执行一次）
         // ========================================
 
-        Ort::Env env(
-            ORT_LOGGING_LEVEL_WARNING,
-            "edge_inference_benchmark"
-        );
+        Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "edge_inference_benchmark");
 
         Ort::SessionOptions session_options;
 
         // 使用默认 CPU Execution Provider
         // 不显式修改 ORT 内部线程数
-        Ort::Session session(
-            env,
-            model_path.c_str(),
-            session_options
-        );
+        Ort::Session session(env, model_path.c_str(), session_options);
 
         Ort::MemoryInfo memory_info =
-            Ort::MemoryInfo::CreateCpu(
-                OrtArenaAllocator,
-                OrtMemTypeDefault
-            );
+            Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
         Ort::AllocatorWithDefaultOptions allocator;
 
         // 将 ORT 返回的节点名称复制到 std::string
-        std::string input_name =
-            session.GetInputNameAllocated(0, allocator).get();
+        std::string input_name = session.GetInputNameAllocated(0, allocator).get();
 
-        std::string output_name =
-            session.GetOutputNameAllocated(0, allocator).get();
+        std::string output_name = session.GetOutputNameAllocated(0, allocator).get();
 
         // ========================================
         // 3. 预热
@@ -335,13 +253,7 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < kWarmup; ++i)
         {
-            const auto sample = run_one_frame(
-                session,
-                frame,
-                input_name,
-                output_name,
-                memory_info
-            );
+            const auto sample = run_one_frame(session, frame, input_name, output_name, memory_info);
 
             if (i == 0)
             {
@@ -349,9 +261,7 @@ int main(int argc, char* argv[])
             }
             else if (sample.detection_count != expected_detection_count)
             {
-                throw std::runtime_error(
-                    "Inconsistent detection count during warmup"
-                );
+                throw std::runtime_error("Inconsistent detection count during warmup");
             }
         }
 
@@ -364,19 +274,11 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < kIterations; ++i)
         {
-            const auto sample = run_one_frame(
-                session,
-                frame,
-                input_name,
-                output_name,
-                memory_info
-            );
+            const auto sample = run_one_frame(session, frame, input_name, output_name, memory_info);
 
             if (sample.detection_count != expected_detection_count)
             {
-                throw std::runtime_error(
-                    "Inconsistent detection count during benchmark"
-                );
+                throw std::runtime_error("Inconsistent detection count during benchmark");
             }
 
             samples.push_back(sample);
@@ -394,7 +296,7 @@ int main(int argc, char* argv[])
         inference_times.reserve(samples.size());
         postprocess_times.reserve(samples.size());
 
-        for (const auto& sample : samples)
+        for (const auto &sample : samples)
         {
             preprocess_times.push_back(sample.preprocess_ms);
             inference_times.push_back(sample.inference_ms);
@@ -405,28 +307,22 @@ int main(int argc, char* argv[])
         // 6. 计算统计数据
         // ========================================
 
-        const auto preprocess_stats =
-            calculate_stats(preprocess_times);
+        const auto preprocess_stats = calculate_stats(preprocess_times);
 
-        const auto inference_stats =
-            calculate_stats(inference_times);
+        const auto inference_stats = calculate_stats(inference_times);
 
-        const auto postprocess_stats =
-            calculate_stats(postprocess_times);
+        const auto postprocess_stats = calculate_stats(postprocess_times);
 
         // ========================================
         // 7. 打印性能报告
         // ========================================
 
-        std::cout
-            << "\n========== P3-07 Release Baseline ==========\n";
+        std::cout << "\n========== P3-07 Release Baseline ==========\n";
 
         std::cout << "Model       : " << model_path << '\n';
         std::cout << "Video       : " << video_path << '\n';
 
-        std::cout
-            << "Frame size  : "
-            << frame.cols << " x " << frame.rows << '\n';
+        std::cout << "Frame size  : " << frame.cols << " x " << frame.rows << '\n';
 
 #ifdef NDEBUG
         std::cout << "Build       : Release (NDEBUG)\n";
@@ -434,23 +330,18 @@ int main(int argc, char* argv[])
         std::cout << "Build       : Debug\n";
 #endif
 
-        std::cout << "ORT version : "
-                  << Ort::GetVersionString() << '\n';
+        std::cout << "ORT version : " << Ort::GetVersionString() << '\n';
 
         std::cout << "ORT threads : default (not explicitly set)\n";
         std::cout << "Warmup      : " << kWarmup << '\n';
         std::cout << "Iterations  : " << kIterations << '\n';
 
-        std::cout << "Detections  : "
-                  << expected_detection_count << '\n';
+        std::cout << "Detections  : " << expected_detection_count << '\n';
 
         std::cout << "\n";
 
-        std::cout
-            << std::left << std::setw(16) << "Stage"
-            << std::right << std::setw(14) << "Mean(ms)"
-            << std::setw(14) << "P95(ms)"
-            << '\n';
+        std::cout << std::left << std::setw(16) << "Stage" << std::right << std::setw(14)
+                  << "Mean(ms)" << std::setw(14) << "P95(ms)" << '\n';
 
         std::cout << std::fixed << std::setprecision(3);
 
@@ -458,15 +349,13 @@ int main(int argc, char* argv[])
         print_stats("Inference", inference_stats);
         print_stats("Postprocess", postprocess_stats);
 
-        std::cout
-            << "============================================\n";
+        std::cout << "============================================\n";
 
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
-        std::cerr
-            << "[Benchmark Error] " << e.what() << '\n';
+        std::cerr << "[Benchmark Error] " << e.what() << '\n';
 
         return 1;
     }

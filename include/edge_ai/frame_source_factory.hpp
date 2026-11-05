@@ -8,6 +8,6 @@
 namespace edge_ai
 {
 // 根据类型创建具体对象
-std::unique_ptr<FrameSource> create_frame_source(const SourceConfig& config);
+std::unique_ptr<FrameSource> create_frame_source(const SourceConfig &config);
 
 } // namespace edge_ai

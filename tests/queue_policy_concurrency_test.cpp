@@ -10,7 +10,7 @@
 using edge_ai::BlockingQueue;
 using edge_ai::QueuePolicy;
 
-void run_test(QueuePolicy policy, const char* name)
+void run_test(QueuePolicy policy, const char *name)
 {
     constexpr std::size_t kCapacity = 4;
     constexpr int kFramesPerProducer = 100;
@@ -21,19 +21,18 @@ void run_test(QueuePolicy policy, const char* name)
     std::atomic<std::size_t> consumed{0};
 
     // 消费者：故意放慢消费速度
-    std::thread consumer([&]
-    {
-        int value = 0;
-
-        while (queue.pop(value))
+    std::thread consumer(
+        [&]
         {
-            ++consumed;
+            int value = 0;
 
-            std::this_thread::sleep_for(
-                std::chrono::microseconds(500)
-            );
-        }
-    });
+            while (queue.pop(value))
+            {
+                ++consumed;
+
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
+            }
+        });
 
     // 生产者任务
     auto produce = [&](int start_id)
@@ -64,41 +63,26 @@ void run_test(QueuePolicy policy, const char* name)
 
     if (a != c + d)
     {
-        throw std::runtime_error(
-            "Accepted != Consumed + Dropped"
-        );
+        throw std::runtime_error("Accepted != Consumed + Dropped");
     }
 
-    if (queue.size() != 0 ||
-        queue.peak_size() > kCapacity)
+    if (queue.size() != 0 || queue.peak_size() > kCapacity)
     {
-        throw std::runtime_error(
-            "Queue size invariant failed"
-        );
+        throw std::runtime_error("Queue size invariant failed");
     }
 
     if (policy == QueuePolicy::Blocking && d != 0)
     {
-        throw std::runtime_error(
-            "Blocking policy unexpectedly dropped frames"
-        );
+        throw std::runtime_error("Blocking policy unexpectedly dropped frames");
     }
 
-    if (policy == QueuePolicy::LatestFrame &&
-        queue.peak_size() > 1)
+    if (policy == QueuePolicy::LatestFrame && queue.peak_size() > 1)
     {
-        throw std::runtime_error(
-            "LatestFrame kept multiple pending frames"
-        );
+        throw std::runtime_error("LatestFrame kept multiple pending frames");
     }
 
-    std::cout
-        << "[PASS] " << name
-        << " | accepted=" << a
-        << " consumed=" << c
-        << " dropped=" << d
-        << " peak=" << queue.peak_size()
-        << '\n';
+    std::cout << "[PASS] " << name << " | accepted=" << a << " consumed=" << c << " dropped=" << d
+              << " peak=" << queue.peak_size() << '\n';
 }
 
 int main()
@@ -112,7 +96,7 @@ int main()
         std::cout << "Queue concurrency: ALL PASS\n";
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "[FAIL] " << e.what() << '\n';
         return 1;

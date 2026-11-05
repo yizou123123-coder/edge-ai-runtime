@@ -9,7 +9,7 @@
 namespace edge_ai
 {
 
-void validate_config(const RuntimeConfig& config)
+void validate_config(const RuntimeConfig &config)
 {
     // 1. Queue Capacity 不能为 0
     if (config.runtime.queue_capacity == 0)
@@ -27,11 +27,11 @@ void validate_config(const RuntimeConfig& config)
     {
         throw std::invalid_argument("deadline_ms error");
     }
-    
+
     const double confidence = config.model.confidence_threshold;
-    if (!std::isfinite(confidence) ||confidence < 0.0 || confidence > 1.0)
+    if (!std::isfinite(confidence) || confidence < 0.0 || confidence > 1.0)
     {
-         throw std::invalid_argument("confidence_threshold must be finite and within [0, 1]");
+        throw std::invalid_argument("confidence_threshold must be finite and within [0, 1]");
     }
 
     if (config.model.nms_iou_threshold < 0.0 || config.model.nms_iou_threshold > 1.0)
@@ -49,25 +49,22 @@ void validate_config(const RuntimeConfig& config)
     {
         throw std::invalid_argument("intra_op_threads must be >= 0");
     }
-    
 }
 
-
-void validate_startup_config(const RuntimeConfig& config)
+void validate_startup_config(const RuntimeConfig &config)
 {
     if (config.source.type == SourceType::Video && config.source.video_path.empty())
     {
         throw std::invalid_argument("Video path error");
     }
-    
+
     if (config.model.path.empty())
     {
         throw std::invalid_argument("model path error");
     }
 }
 
-
-RuntimeConfig load_config(const std::string& path)
+RuntimeConfig load_config(const std::string &path)
 {
     // 1. 读取并解析 YAML 文件
     const YAML::Node root = YAML::LoadFile(path);
@@ -81,14 +78,15 @@ RuntimeConfig load_config(const std::string& path)
     if (source_type == "video")
     {
         config.source.type = SourceType::Video;
-    }else if(source_type == "camera")
+    }
+    else if (source_type == "camera")
     {
         config.source.type = SourceType::Camera;
-    }else
+    }
+    else
     {
         throw std::invalid_argument("Unknown source type: " + source_type);
     }
-
 
     // 4. 读取队列策略
     const std::string policy_name = root["runtime"]["queue_policy"].as<std::string>();
@@ -96,13 +94,16 @@ RuntimeConfig load_config(const std::string& path)
     if (policy_name == "blocking")
     {
         config.runtime.queue_policy = QueuePolicy::Blocking;
-    }else if (policy_name == "drop_oldest")
+    }
+    else if (policy_name == "drop_oldest")
     {
         config.runtime.queue_policy = QueuePolicy::DropOldest;
-    }else if (policy_name == "latest_frame")
+    }
+    else if (policy_name == "latest_frame")
     {
         config.runtime.queue_policy = QueuePolicy::LatestFrame;
-    }else
+    }
+    else
     {
         throw std::invalid_argument("Unknown queue policy: " + policy_name);
     }
@@ -119,14 +120,13 @@ RuntimeConfig load_config(const std::string& path)
     {
         config.source.video_path = source_node["video_path"].as<std::string>();
     }
-    
+
     if (source_node["camera_index"])
     {
         config.source.camera_index = source_node["camera_index"].as<int>();
     }
-    
 
-    //6. RuntimeOptions 其他字段
+    // 6. RuntimeOptions 其他字段
     const YAML::Node runtime_node = root["runtime"];
 
     if (runtime_node["queue_capacity"])
@@ -139,7 +139,6 @@ RuntimeConfig load_config(const std::string& path)
         config.runtime.deadline_ms = runtime_node["deadline_ms"].as<double>();
     }
 
-    
     // 7. ModelConfig 字段映射
     // model 整个分组允许省略，使用 RuntimeConfig 默认值
     const YAML::Node model_node = root["model"];
@@ -155,7 +154,7 @@ RuntimeConfig load_config(const std::string& path)
         {
             config.model.confidence_threshold = model_node["confidence_threshold"].as<double>();
         }
-        
+
         if (model_node["nms_iou_threshold"])
         {
             config.model.nms_iou_threshold = model_node["nms_iou_threshold"].as<double>();
@@ -190,4 +189,4 @@ RuntimeConfig load_config(const std::string& path)
     return config;
 }
 
-}// namespace edge_ai
+} // namespace edge_ai
