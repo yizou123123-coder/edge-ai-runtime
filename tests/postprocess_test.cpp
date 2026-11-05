@@ -9,19 +9,11 @@
 namespace
 {
 
-bool near(float a, float b)
-{
-    return std::fabs(a - b) < 1e-3F;
-}
+bool near(float a, float b) { return std::fabs(a - b) < 1e-3F; }
 
 // 按 YOLO [84, N] 的排列方式填入一个候选框
-void set_candidate(
-    std::vector<float>& data,
-    std::size_t n,
-    std::size_t i,
-    float cx, float cy, float w, float h,
-    int class_id,
-    float confidence)
+void set_candidate(std::vector<float> &data, std::size_t n, std::size_t i, float cx, float cy,
+                   float w, float h, int class_id, float confidence)
 {
     data[0 * n + i] = cx;
     data[1 * n + i] = cy;
@@ -31,20 +23,13 @@ void set_candidate(
     data[(4 + class_id) * n + i] = confidence;
 }
 
-bool contains(
-    const std::vector<edge_ai::Detection>& detections,
-    int class_id,
-    float confidence,
-    float x, float y, float w, float h)
+bool contains(const std::vector<edge_ai::Detection> &detections, int class_id, float confidence,
+              float x, float y, float w, float h)
 {
-    for (const auto& det : detections)
+    for (const auto &det : detections)
     {
-        if (det.class_id == class_id &&
-            near(det.confidence, confidence) &&
-            near(det.box.x, x) &&
-            near(det.box.y, y) &&
-            near(det.box.width, w) &&
-            near(det.box.height, h))
+        if (det.class_id == class_id && near(det.confidence, confidence) && near(det.box.x, x) &&
+            near(det.box.y, y) && near(det.box.width, w) && near(det.box.height, h))
         {
             return true;
         }
@@ -52,19 +37,13 @@ bool contains(
     return false;
 }
 
-void print_detections(
-    const std::vector<edge_ai::Detection>& detections)
+void print_detections(const std::vector<edge_ai::Detection> &detections)
 {
-    for (const auto& det : detections)
+    for (const auto &det : detections)
     {
-        std::cout
-            << "Class: " << det.class_id
-            << " Score: " << det.confidence
-            << " Box: ("
-            << det.box.x << ", "
-            << det.box.y << ", "
-            << det.box.width << ", "
-            << det.box.height << ")\n";
+        std::cout << "Class: " << det.class_id << " Score: " << det.confidence << " Box: ("
+                  << det.box.x << ", " << det.box.y << ", " << det.box.width << ", "
+                  << det.box.height << ")\n";
     }
 }
 
@@ -101,12 +80,9 @@ int main()
         prep.pad_x = 0;
         prep.pad_y = 0;
 
-        auto result = edge_ai::postprocess_yolo(
-            data.data(), n, prep, 0.25F, 0.45F
-        );
+        auto result = edge_ai::postprocess_yolo(data.data(), n, prep, 0.25F, 0.45F);
 
-        if (result.size() != 3 ||
-            !contains(result, 0, 0.95F, 80, 80, 40, 40) ||
+        if (result.size() != 3 || !contains(result, 0, 0.95F, 80, 80, 40, 40) ||
             !contains(result, 0, 0.90F, 280, 280, 40, 40) ||
             !contains(result, 2, 0.85F, 81, 81, 40, 40))
         {
@@ -137,14 +113,11 @@ int main()
         prep.pad_x = 0;
         prep.pad_y = 140;
 
-        auto result = edge_ai::postprocess_yolo(
-            data.data(), n, prep, 0.25F, 0.45F
-        );
+        auto result = edge_ai::postprocess_yolo(data.data(), n, prep, 0.25F, 0.45F);
 
         // 还原后：
         // x=300, y=180, w=120, h=240
-        if (result.size() != 1 ||
-            !contains(result, 0, 0.90F, 300, 180, 120, 240))
+        if (result.size() != 1 || !contains(result, 0, 0.90F, 300, 180, 120, 240))
         {
             std::cerr << "TEST 2 FAIL: Letterbox restore\n";
             print_detections(result);
@@ -171,17 +144,14 @@ int main()
         prep.pad_x = 0;
         prep.pad_y = 140;
 
-        auto result = edge_ai::postprocess_yolo(
-            data.data(), n, prep, 0.25F, 0.45F
-        );
+        auto result = edge_ai::postprocess_yolo(data.data(), n, prep, 0.25F, 0.45F);
 
         // 裁剪前：
         // x=-30, y=-60, x2=60, y2=120
         //
         // 裁剪到原图后：
         // x=0, y=0, w=60, h=120
-        if (result.size() != 1 ||
-            !contains(result, 0, 0.90F, 0, 0, 60, 120))
+        if (result.size() != 1 || !contains(result, 0, 0.90F, 0, 0, 60, 120))
         {
             std::cerr << "TEST 3 FAIL: Boundary clipping\n";
             print_detections(result);

@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 using Config = edge_ai::RuntimeConfig;
 
-void require(bool condition, const std::string& message)
+void require(bool condition, const std::string &message)
 {
     if (!condition)
     {
@@ -27,78 +27,48 @@ void require(bool condition, const std::string& message)
 struct InvalidCase
 {
     std::string name;
-    std::function<void(Config&)> modify;
+    std::function<void(Config &)> modify;
 };
 
 // 验证 validate_config 拒绝非法配置
 void test_invalid_ranges()
 {
-    const double nan =
-        std::numeric_limits<double>::quiet_NaN();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
 
-    const double inf =
-        std::numeric_limits<double>::infinity();
+    const double inf = std::numeric_limits<double>::infinity();
 
     const std::vector<InvalidCase> cases = {
-        {"queue_capacity = 0",
-         [](Config& c) { c.runtime.queue_capacity = 0; }},
+        {"queue_capacity = 0", [](Config &c) { c.runtime.queue_capacity = 0; }},
 
-        {"target_fps = -30",
-         [](Config& c) { c.source.target_fps = -30.0; }},
+        {"target_fps = -30", [](Config &c) { c.source.target_fps = -30.0; }},
 
-        {"target_fps = NaN",
-         [nan](Config& c) { c.source.target_fps = nan; }},
+        {"target_fps = NaN", [nan](Config &c) { c.source.target_fps = nan; }},
 
-        {"target_fps = Infinity",
-         [inf](Config& c) { c.source.target_fps = inf; }},
+        {"target_fps = Infinity", [inf](Config &c) { c.source.target_fps = inf; }},
 
-        {"deadline_ms = 0",
-         [](Config& c) { c.runtime.deadline_ms = 0.0; }},
+        {"deadline_ms = 0", [](Config &c) { c.runtime.deadline_ms = 0.0; }},
 
-        {"deadline_ms = -100",
-         [](Config& c) { c.runtime.deadline_ms = -100.0; }},
+        {"deadline_ms = -100", [](Config &c) { c.runtime.deadline_ms = -100.0; }},
 
-        {"deadline_ms = NaN",
-         [nan](Config& c) { c.runtime.deadline_ms = nan; }},
+        {"deadline_ms = NaN", [nan](Config &c) { c.runtime.deadline_ms = nan; }},
 
-        {"deadline_ms = Infinity",
-         [inf](Config& c) { c.runtime.deadline_ms = inf; }},
+        {"deadline_ms = Infinity", [inf](Config &c) { c.runtime.deadline_ms = inf; }},
 
-        {"confidence = -0.1",
-         [](Config& c) {
-             c.model.confidence_threshold = -0.1;
-         }},
+        {"confidence = -0.1", [](Config &c) { c.model.confidence_threshold = -0.1; }},
 
-        {"confidence = 1.5",
-         [](Config& c) {
-             c.model.confidence_threshold = 1.5;
-         }},
+        {"confidence = 1.5", [](Config &c) { c.model.confidence_threshold = 1.5; }},
 
-        {"confidence = NaN",
-         [nan](Config& c) {
-             c.model.confidence_threshold = nan;
-         }},
+        {"confidence = NaN", [nan](Config &c) { c.model.confidence_threshold = nan; }},
 
-        {"nms_iou = -0.2",
-         [](Config& c) {
-             c.model.nms_iou_threshold = -0.2;
-         }},
+        {"nms_iou = -0.2", [](Config &c) { c.model.nms_iou_threshold = -0.2; }},
 
-        {"nms_iou = 1.1",
-         [](Config& c) {
-             c.model.nms_iou_threshold = 1.1;
-         }},
+        {"nms_iou = 1.1", [](Config &c) { c.model.nms_iou_threshold = 1.1; }},
 
-        {"nms_iou = Infinity",
-         [inf](Config& c) {
-             c.model.nms_iou_threshold = inf;
-         }},
+        {"nms_iou = Infinity", [inf](Config &c) { c.model.nms_iou_threshold = inf; }},
 
-        {"camera_index = -1",
-         [](Config& c) { c.source.camera_index = -1; }}
-    };
+        {"camera_index = -1", [](Config &c) { c.source.camera_index = -1; }}};
 
-    for (const auto& test : cases)
+    for (const auto &test : cases)
     {
         Config config{};
         test.modify(config);
@@ -109,15 +79,14 @@ void test_invalid_ranges()
         {
             edge_ai::validate_config(config);
         }
-        catch (const std::invalid_argument&)
+        catch (const std::invalid_argument &)
         {
             rejected = true;
         }
 
         require(rejected, "Accepted invalid: " + test.name);
 
-        std::cout
-            << "[PASS] Rejected " << test.name << '\n';
+        std::cout << "[PASS] Rejected " << test.name << '\n';
     }
 }
 
@@ -155,14 +124,10 @@ void test_valid_boundaries()
 // 验证 load_config 真正调用了 validate_config
 void test_loader_validation()
 {
-    const auto id =
-        std::chrono::steady_clock::now()
-            .time_since_epoch().count();
+    const auto id = std::chrono::steady_clock::now().time_since_epoch().count();
 
     const fs::path path =
-        fs::temp_directory_path() /
-        ("edge_ai_invalid_config_" +
-         std::to_string(id) + ".yaml");
+        fs::temp_directory_path() / ("edge_ai_invalid_config_" + std::to_string(id) + ".yaml");
 
     // RAII：测试结束时删除临时文件
     struct Cleanup
@@ -179,10 +144,7 @@ void test_loader_validation()
     {
         std::ofstream out(path);
 
-        require(
-            static_cast<bool>(out),
-            "Failed to create YAML test file"
-        );
+        require(static_cast<bool>(out), "Failed to create YAML test file");
 
         out << R"(
 source:
@@ -195,10 +157,7 @@ runtime:
 
         out.flush();
 
-        require(
-            static_cast<bool>(out),
-            "Failed to write YAML test file"
-        );
+        require(static_cast<bool>(out), "Failed to write YAML test file");
     }
 
     bool rejected = false;
@@ -207,15 +166,12 @@ runtime:
     {
         (void)edge_ai::load_config(path.string());
     }
-    catch (const std::invalid_argument&)
+    catch (const std::invalid_argument &)
     {
         rejected = true;
     }
 
-    require(
-        rejected,
-        "load_config did not validate queue_capacity"
-    );
+    require(rejected, "load_config did not validate queue_capacity");
 
     std::cout << "[PASS] Loader invokes validation\n";
 }
@@ -233,15 +189,13 @@ int main()
         // 3. YAML 加载与校验集成
         test_loader_validation();
 
-        std::cout
-            << "\nConfigValidation: ALL PASS\n";
+        std::cout << "\nConfigValidation: ALL PASS\n";
 
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
-        std::cerr
-            << "[FAIL] " << e.what() << '\n';
+        std::cerr << "[FAIL] " << e.what() << '\n';
 
         return 1;
     }

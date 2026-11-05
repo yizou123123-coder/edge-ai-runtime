@@ -18,14 +18,13 @@ enum class QueuePolicy
     LatestFrame
 };
 
-// 这个 Queue 不提前规定里面一定装什么类型，T=int/float/double/Mat... T 就是一个“占位符”，根据对象创建的不同改变
-template <typename T>
-class BlockingQueue
+// 这个 Queue 不提前规定里面一定装什么类型，T=int/float/double/Mat... T
+// 就是一个“占位符”，根据对象创建的不同改变
+template <typename T> class BlockingQueue
 {
-public:
+  public:
     explicit BlockingQueue(std::size_t capacity, QueuePolicy policy = QueuePolicy::Blocking)
-        : capacity_(capacity),
-          policy_(policy)
+        : capacity_(capacity), policy_(policy)
     {
         if (capacity_ == 0)
         {
@@ -41,15 +40,11 @@ public:
         if (policy_ == QueuePolicy::Blocking)
         {
             // 如果队列现在已经关闭，或者队列还有空间，我就继续；没有空间则producer等待
-            // 当 Lambda 返回 false，线程就乖乖在原地睡觉；当 Lambda 返回 true 时，线程才会停止等待、被放行
-            not_full_.wait(
-                lock,
-                // 放行条件
-                [this]
-                {
-                    return closed_ || queue_.size() < capacity_;
-                }
-            );
+            // 当 Lambda 返回 false，线程就乖乖在原地睡觉；当 Lambda 返回 true
+            // 时，线程才会停止等待、被放行
+            not_full_.wait(lock,
+                           // 放行条件
+                           [this] { return closed_ || queue_.size() < capacity_; });
         }
 
         // 确认队列是否被关闭
@@ -65,7 +60,7 @@ public:
         }
         else if (policy_ == QueuePolicy::LatestFrame)
         {
-            while(!queue_.empty())
+            while (!queue_.empty())
             {
                 queue_.pop();
                 dropped_count_++;
@@ -83,18 +78,12 @@ public:
         return true;
     }
 
-    bool pop(T& value)
+    bool pop(T &value)
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
         // 不空则继续，空则等待
-        not_empty_.wait(
-            lock,
-            [this]
-            {
-                return closed_ || !queue_.empty();
-            }
-        );
+        not_empty_.wait(lock, [this] { return closed_ || !queue_.empty(); });
 
         if (queue_.empty())
         {
@@ -146,7 +135,7 @@ public:
     // 队列有元素：立即取出，返回 true。
     // 队列为空：立即返回 false，不等待。
     // 队列已经关闭但还有元素：仍然允许取出剩余元素。
-    bool try_pop(T& value)
+    bool try_pop(T &value)
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
@@ -165,8 +154,7 @@ public:
         return true;
     }
 
-
-private:
+  private:
     std::queue<T> queue_;
 
     std::size_t capacity_;
@@ -186,4 +174,4 @@ private:
     std::size_t dropped_count_{0};
 };
 
-}  // namespace edge_ai
+} // namespace edge_ai

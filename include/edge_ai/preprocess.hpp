@@ -26,10 +26,6 @@ struct PreprocessResult
 };
 
 // 预处理函数，返回结构体
-PreprocessResult preprocess_yolo(
-    const cv::Mat& image,
-    int target_width,
-    int target_height
-);
+PreprocessResult preprocess_yolo(const cv::Mat &image, int target_width, int target_height);
 
-}  // namespace edge_ai
+} // namespace edge_ai

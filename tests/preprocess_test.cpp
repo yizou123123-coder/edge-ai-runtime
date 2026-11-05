@@ -8,7 +8,7 @@
 int main()
 {
     cv::Mat frame(480, 640, CV_8UC3, cv::Scalar(10, 20, 30));
-    
+
     const auto result = edge_ai::preprocess_yolo(frame, 640, 640);
 
     std::cout << "original_width: " << result.original_width << '\n';
@@ -32,8 +32,9 @@ int main()
         std::cerr << "Invalid scale or pad values!\n";
         return 1;
     }
-    
-    const auto [min_it, max_it] = std::minmax_element(result.tensor_data.begin(), result.tensor_data.end());
+
+    const auto [min_it, max_it] =
+        std::minmax_element(result.tensor_data.begin(), result.tensor_data.end());
 
     const float min_val = *min_it;
     const float max_val = *max_it;
@@ -44,7 +45,6 @@ int main()
         std::cerr << "Tensor values are out of [0.0, 1.0] range!\n";
         return 1;
     }
-
 
     std::cout << "Preprocess test: PASS\n";
 

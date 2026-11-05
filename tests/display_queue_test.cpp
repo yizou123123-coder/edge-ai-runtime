@@ -10,7 +10,7 @@
 
 using namespace edge_ai;
 
-void require(bool condition, const char* message)
+void require(bool condition, const char *message)
 {
     if (!condition)
         throw std::runtime_error(message);
@@ -21,9 +21,7 @@ InferenceResult make_result(std::uint64_t id)
     InferenceResult result;
 
     result.frame.id = id;
-    result.frame.image = cv::Mat(
-        8, 8, CV_8UC3, cv::Scalar(0, 0, 0)
-    );
+    result.frame.image = cv::Mat(8, 8, CV_8UC3, cv::Scalar(0, 0, 0));
 
     Detection detection;
     detection.class_id = 15;
@@ -37,9 +35,7 @@ InferenceResult make_result(std::uint64_t id)
 
 void test_latest_frame()
 {
-    BlockingQueue<InferenceResult> queue(
-        1, QueuePolicy::LatestFrame
-    );
+    BlockingQueue<InferenceResult> queue(1, QueuePolicy::LatestFrame);
 
     require(queue.push(make_result(1)), "Push 1 failed");
     require(queue.push(make_result(2)), "Push 2 failed");
@@ -54,8 +50,7 @@ void test_latest_frame()
 
     require(!result.frame.image.empty(), "Image was lost");
     require(result.detections.size() == 1, "Detections lost");
-    require(result.detections[0].class_id == 15,
-            "Detection data mismatch");
+    require(result.detections[0].class_id == 15, "Detection data mismatch");
 
     require(!queue.try_pop(result), "Empty queue returned data");
 
@@ -64,27 +59,21 @@ void test_latest_frame()
 
 void test_close_and_drain()
 {
-    BlockingQueue<InferenceResult> queue(
-        1, QueuePolicy::LatestFrame
-    );
+    BlockingQueue<InferenceResult> queue(1, QueuePolicy::LatestFrame);
 
     require(queue.push(make_result(7)), "Push failed");
 
     queue.close();
 
-    require(!queue.push(make_result(8)),
-            "Closed queue accepted a new result");
+    require(!queue.push(make_result(8)), "Closed queue accepted a new result");
 
     InferenceResult result;
 
-    require(queue.try_pop(result),
-            "Closed queue failed to drain");
+    require(queue.try_pop(result), "Closed queue failed to drain");
 
-    require(result.frame.id == 7,
-            "Drained frame ID mismatch");
+    require(result.frame.id == 7, "Drained frame ID mismatch");
 
-    require(!queue.try_pop(result),
-            "Empty closed queue returned data");
+    require(!queue.try_pop(result), "Empty closed queue returned data");
 
     std::cout << "[PASS] Close and drain\n";
 }
@@ -99,7 +88,7 @@ int main()
         std::cout << "\nDisplayQueue: ALL PASS\n";
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "[FAIL] " << e.what() << '\n';
         return 1;

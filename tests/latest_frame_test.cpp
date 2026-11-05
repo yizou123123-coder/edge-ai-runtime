@@ -7,7 +7,7 @@
 using edge_ai::BlockingQueue;
 using edge_ai::QueuePolicy;
 
-void require(bool condition, const char* message)
+void require(bool condition, const char *message)
 {
     if (!condition)
     {
@@ -80,7 +80,7 @@ int main()
         std::cout << "LatestFrame tests: ALL PASS\n";
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "[FAIL] " << e.what() << '\n';
         return 1;

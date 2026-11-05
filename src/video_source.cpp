@@ -7,10 +7,8 @@
 
 namespace edge_ai
 {
-VideoSource::VideoSource(const std::string& video_path, double target_fps)
-    :video_path_(video_path),
-     capture_(video_path),
-     target_fps_(target_fps)
+VideoSource::VideoSource(const std::string &video_path, double target_fps)
+    : video_path_(video_path), capture_(video_path), target_fps_(target_fps)
 {
     if (!std::isfinite(target_fps_) || target_fps_ < 0.0)
     {
@@ -18,18 +16,15 @@ VideoSource::VideoSource(const std::string& video_path, double target_fps)
     }
 }
 
-bool VideoSource::is_open() const
-{
-    return capture_.isOpened();
-}
+bool VideoSource::is_open() const { return capture_.isOpened(); }
 
-bool VideoSource::read(cv::Mat& frame)
+bool VideoSource::read(cv::Mat &frame)
 {
     if (target_fps_ == 0)
     {
         return capture_.read(frame);
     }
-    
+
     // 第一次读取时初始化
     if (emitted_frames_ == 0)
     {
@@ -39,7 +34,8 @@ bool VideoSource::read(cv::Mat& frame)
             return false;
         }
         // 帧间隔时长
-        frame_interval_ = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1.0 / target_fps_));
+        frame_interval_ = std::chrono::duration_cast<Clock::duration>(
+            std::chrono::duration<double>(1.0 / target_fps_));
 
         // 初始化第一帧实际成功提供时的时间点、槽
         playback_start_ = Clock::now();
@@ -87,17 +83,9 @@ bool VideoSource::read(cv::Mat& frame)
     return true;
 }
 
-double VideoSource::fps() const{
-    return capture_.get(cv::CAP_PROP_FPS);
-}
+double VideoSource::fps() const { return capture_.get(cv::CAP_PROP_FPS); }
 
-const std::string& VideoSource::path() const{
-    return video_path_;
-}
+const std::string &VideoSource::path() const { return video_path_; }
 
-std::uint64_t VideoSource::skipped_slots() const
-{
-
-    return skipped_slots_;
-}
+std::uint64_t VideoSource::skipped_slots() const { return skipped_slots_; }
 } // namespace edge_ai

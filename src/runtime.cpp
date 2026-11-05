@@ -16,16 +16,14 @@
 namespace edge_ai
 {
 // 通用
-Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy, std::size_t queue_capacity, std::string model_path, double deadline_ms,
-                 double confidence_threshold, double nms_iou_threshold, bool display_enabled, int intra_op_threads)
-    : source_(std::move(source)),
-      frame_queue_(queue_capacity, policy),
-      model_path_(std::move(model_path)),
-      deadline_ms_(deadline_ms),
-      confidence_threshold_(confidence_threshold),
-      nms_iou_threshold_(nms_iou_threshold),
-      display_enabled_(display_enabled),
-      intra_op_threads_(intra_op_threads)
+Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy,
+                 std::size_t queue_capacity, std::string model_path, double deadline_ms,
+                 double confidence_threshold, double nms_iou_threshold, bool display_enabled,
+                 int intra_op_threads)
+    : source_(std::move(source)), frame_queue_(queue_capacity, policy),
+      model_path_(std::move(model_path)), deadline_ms_(deadline_ms),
+      confidence_threshold_(confidence_threshold), nms_iou_threshold_(nms_iou_threshold),
+      display_enabled_(display_enabled), intra_op_threads_(intra_op_threads)
 {
     if (source_ == nullptr)
     {
@@ -39,7 +37,8 @@ Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy, std::s
     {
         throw std::invalid_argument("deadline_ms error");
     }
-    if (!std::isfinite(confidence_threshold_) || confidence_threshold_ < 0 || confidence_threshold_ > 1)
+    if (!std::isfinite(confidence_threshold_) || confidence_threshold_ < 0 ||
+        confidence_threshold_ > 1)
     {
         throw std::invalid_argument("confidence_threshold_ error");
     }
@@ -47,11 +46,10 @@ Runtime::Runtime(std::unique_ptr<FrameSource> source, QueuePolicy policy, std::s
     {
         throw std::invalid_argument("nms_iou_threshold_ error");
     }
-
 }
 
 // old
-Runtime::Runtime(const std::string& video_path, double target_fps, QueuePolicy policy)
+Runtime::Runtime(const std::string &video_path, double target_fps, QueuePolicy policy)
     : Runtime(std::make_unique<VideoSource>(video_path, target_fps), policy)
 {
 }
@@ -64,7 +62,7 @@ Runtime::~Runtime()
 
 bool Runtime::start()
 {
-    if(started_)
+    if (started_)
     {
         Logger::warn("[Runtime] Runtime can only be started once");
         exit_code_.store(5);
@@ -103,7 +101,6 @@ bool Runtime::start()
     return true;
 }
 
-
 void Runtime::join()
 {
     if (capture_thread.joinable())
@@ -117,7 +114,6 @@ void Runtime::join()
     }
 }
 
-
 void Runtime::stop()
 {
     stop_requested_.store(true);
@@ -125,11 +121,7 @@ void Runtime::stop()
     display_queue_.close();
 }
 
-
-int Runtime::exit_code() const
-{
-    return exit_code_.load();
-}
+int Runtime::exit_code() const { return exit_code_.load(); }
 
 // 辅助函数：用于排序，并给出Frame Age数据
 double percentile(std::vector<double> samples, double p)
@@ -141,11 +133,10 @@ double percentile(std::vector<double> samples, double p)
 
     std::sort(samples.begin(), samples.end());
 
-    const std::size_t index =static_cast<std::size_t>(std::ceil(p * samples.size())) - 1;
+    const std::size_t index = static_cast<std::size_t>(std::ceil(p * samples.size())) - 1;
 
     return samples[index];
 }
-
 
 void Runtime::processing_loop()
 {
@@ -155,15 +146,17 @@ void Runtime::processing_loop()
     std::vector<double> frame_ages_ms; // 每一帧处理时间组成动态数组
     std::vector<double> pre_process_ages_ms;
     std::vector<DetectionTiming> detection_timings;
-    std::size_t deadline_misses = 0;   // 处理帧超时的数量
+    std::size_t deadline_misses = 0; // 处理帧超时的数量
     try
     {
         Logger::info("[Processing] ORT intra-op threads: " + std::to_string(intra_op_threads_));
-        OnnxDetector detector(model_path_, confidence_threshold_, nms_iou_threshold_, intra_op_threads_);
+        OnnxDetector detector(model_path_, confidence_threshold_, nms_iou_threshold_,
+                              intra_op_threads_);
         while (frame_queue_.pop(frame))
         {
             const auto process_start = std::chrono::steady_clock::now();
-            const double pre_process_age_ms = std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
+            const double pre_process_age_ms =
+                std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
             pre_process_ages_ms.push_back(pre_process_age_ms);
 
             DetectionTiming timing;
@@ -171,7 +164,8 @@ void Runtime::processing_loop()
             detection_timings.push_back(timing);
 
             const auto output_at = std::chrono::steady_clock::now();
-            const double frame_age_ms = std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
+            const double frame_age_ms =
+                std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
             frame_ages_ms.push_back(frame_age_ms);
             if (frame_age_ms > deadline_ms_)
             {
@@ -180,9 +174,9 @@ void Runtime::processing_loop()
 
             if (frame.id == 0)
             {
-                 Logger::info("[Processing] Frame ID: " + std::to_string(frame.id) +
-                              ", Detections: " + std::to_string(detections.size()) +
-                              ", Frame Age: " + std::to_string(frame_age_ms) + " ms");
+                Logger::info("[Processing] Frame ID: " + std::to_string(frame.id) +
+                             ", Detections: " + std::to_string(detections.size()) +
+                             ", Frame Age: " + std::to_string(frame_age_ms) + " ms");
             }
 
             ++processed_frames;
@@ -201,7 +195,7 @@ void Runtime::processing_loop()
 
         Logger::info("[Processing] Deadline Budget: " + std::to_string(deadline_ms_) + " ms");
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
         Logger::error(std::string("[Processing] ") + e.what());
         int expected = 0;
@@ -214,15 +208,15 @@ void Runtime::processing_loop()
         return;
     }
 
-
     const auto end_time = std::chrono::steady_clock::now();
 
     const double elapsed_seconds = std::chrono::duration<double>(end_time - start_time).count();
     const double processing_fps = static_cast<double>(processed_frames) / elapsed_seconds;
 
-    Logger::info(std::string("[Processing] Elapsed time: ") + std::to_string(elapsed_seconds) + 's');
+    Logger::info(std::string("[Processing] Elapsed time: ") + std::to_string(elapsed_seconds) +
+                 's');
     Logger::info(std::string("[Processing] Processing FPS: ") + std::to_string(processing_fps));
-    Logger::info("[Processing] Frames processed: "+ std::to_string(processed_frames));
+    Logger::info("[Processing] Frames processed: " + std::to_string(processed_frames));
 
     if (!frame_ages_ms.empty())
     {
@@ -230,13 +224,15 @@ void Runtime::processing_loop()
         const double p95 = percentile(frame_ages_ms, 0.95);
         const double p99 = percentile(frame_ages_ms, 0.99);
 
-        Logger::info("[Processing] Frame Age P50: " +std::to_string(p50) + " ms");
-        Logger::info("[Processing] Frame Age P95: " +std::to_string(p95) + " ms");
-        Logger::info("[Processing] Frame Age P99: " +std::to_string(p99) + " ms");
+        Logger::info("[Processing] Frame Age P50: " + std::to_string(p50) + " ms");
+        Logger::info("[Processing] Frame Age P95: " + std::to_string(p95) + " ms");
+        Logger::info("[Processing] Frame Age P99: " + std::to_string(p99) + " ms");
 
-        const double deadline_miss_rate =100.0 * static_cast<double>(deadline_misses) /static_cast<double>(frame_ages_ms.size());
+        const double deadline_miss_rate = 100.0 * static_cast<double>(deadline_misses) /
+                                          static_cast<double>(frame_ages_ms.size());
         Logger::info("[Processing] Deadline Misses: " + std::to_string(deadline_misses));
-        Logger::info("[Processing] Deadline Miss Rate: " +std::to_string(deadline_miss_rate) + "%");
+        Logger::info("[Processing] Deadline Miss Rate: " + std::to_string(deadline_miss_rate) +
+                     "%");
     }
     else
     {
@@ -259,9 +255,11 @@ void Runtime::processing_loop()
 
     if (accepted_count > 0)
     {
-        const double on_time_rate = 100.0 * static_cast<double>(on_time_count) / static_cast<double>(accepted_count);
+        const double on_time_rate =
+            100.0 * static_cast<double>(on_time_count) / static_cast<double>(accepted_count);
 
-        const double queue_drop_rate = 100.0 * static_cast<double>(queue_dropped) / static_cast<double>(accepted_count);
+        const double queue_drop_rate =
+            100.0 * static_cast<double>(queue_dropped) / static_cast<double>(accepted_count);
 
         Logger::info("[Processing] On-time Frames: " + std::to_string(on_time_count));
 
@@ -272,11 +270,14 @@ void Runtime::processing_loop()
 
     if (!pre_process_ages_ms.empty())
     {
-        Logger::info("[Processing] Capture-to-Process P50: " + std::to_string(percentile(pre_process_ages_ms, 0.50)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P50: " +
+                     std::to_string(percentile(pre_process_ages_ms, 0.50)) + " ms");
 
-        Logger::info("[Processing] Capture-to-Process P95: " + std::to_string(percentile(pre_process_ages_ms, 0.95)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P95: " +
+                     std::to_string(percentile(pre_process_ages_ms, 0.95)) + " ms");
 
-        Logger::info("[Processing] Capture-to-Process P99: " + std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P99: " +
+                     std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
     }
 
     if (!detection_timings.empty())
@@ -285,7 +286,7 @@ void Runtime::processing_loop()
         std::vector<double> inference_ms;
         std::vector<double> postprocess_ms;
 
-        for (const auto& t : detection_timings)
+        for (const auto &t : detection_timings)
         {
             preprocess_ms.push_back(t.preprocess_ms);
             inference_ms.push_back(t.inference_ms);
@@ -293,22 +294,26 @@ void Runtime::processing_loop()
         }
 
         // TODO 1：统一统计并输出 Mean / P50 / P95 / P99
-        auto log_stats = [](const std::string& stage, const std::vector<double>& values)
+        auto log_stats = [](const std::string &stage, const std::vector<double> &values)
         {
             if (values.empty())
             {
                 return;
             }
 
-            const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
+            const double mean = std::accumulate(values.begin(), values.end(), 0.0) /
+                                static_cast<double>(values.size());
 
             Logger::info("[Processing] " + stage + " Mean: " + std::to_string(mean) + " ms");
 
-            Logger::info("[Processing] " + stage + " P50: " + std::to_string(percentile(values, 0.50)) + " ms");
+            Logger::info("[Processing] " + stage +
+                         " P50: " + std::to_string(percentile(values, 0.50)) + " ms");
 
-            Logger::info("[Processing] " + stage + " P95: " + std::to_string(percentile(values, 0.95)) + " ms");
+            Logger::info("[Processing] " + stage +
+                         " P95: " + std::to_string(percentile(values, 0.95)) + " ms");
 
-            Logger::info("[Processing] " + stage + " P99: " + std::to_string(percentile(values, 0.99)) + " ms");
+            Logger::info("[Processing] " + stage +
+                         " P99: " + std::to_string(percentile(values, 0.99)) + " ms");
         };
 
         // TODO 2：统计三个阶段
@@ -331,7 +336,7 @@ void Runtime::capture_loop()
 
     const auto start_time = std::chrono::steady_clock::now();
 
-    while(!stop_requested_.load() && source_->read(raw_frame))
+    while (!stop_requested_.load() && source_->read(raw_frame))
     {
         const auto captured_at = std::chrono::steady_clock::now();
 
@@ -349,7 +354,7 @@ void Runtime::capture_loop()
         frame.capture_ts = captured_at;
         frame.image = std::move(raw_frame);
 
-        if(!frame_queue_.push(std::move(frame)))
+        if (!frame_queue_.push(std::move(frame)))
         {
             break;
         }
@@ -370,12 +375,12 @@ void Runtime::capture_loop()
 
     if (captured_frames == 0)
     {
-        if(stop_requested_.load())
+        if (stop_requested_.load())
         {
             Logger::info("[Capture] Stop requested");
         }
         // video
-        else if(!live_source_failed)
+        else if (!live_source_failed)
         {
             Logger::error("[Capture] Video contains no readable frames");
             int expected = 0;
@@ -395,18 +400,12 @@ void Runtime::capture_loop()
     Logger::info(std::string("[Capture] Capture FPS: ") + std::to_string(capture_fps));
     Logger::info(std::string("[Capture] Peak_Queue_Size: ") + std::to_string(peak_queue_size));
 
-    Logger::info("[Capture] Queue Dropped: " +std::to_string(frame_queue_.dropped_count()));
+    Logger::info("[Capture] Queue Dropped: " + std::to_string(frame_queue_.dropped_count()));
 
     Logger::info("[Capture] Source Skipped Slots: " + std::to_string(source_->skipped_slots()));
 }
 
-bool Runtime::try_pop_display(InferenceResult& result)
-{
-    return display_queue_.try_pop(result);
-}
+bool Runtime::try_pop_display(InferenceResult &result) { return display_queue_.try_pop(result); }
 
-bool Runtime::display_finished() const
-{
-    return display_finished_.load();
-}
-}  // namespace edge_ai
+bool Runtime::display_finished() const { return display_finished_.load(); }
+} // namespace edge_ai

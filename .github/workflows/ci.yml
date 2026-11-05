@@ -64,3 +64,8 @@ jobs:
           cmake --preset x86-tsan
           cmake --build --preset x86-tsan --target blocking_queue_test -j4
           ./build/x86-tsan/blocking_queue_test
+      
+      - name: Check C++ formatting
+        run: |
+          git ls-files -z -- '*.cpp' '*.hpp' '*.h' |
+          xargs -0 -r clang-format-18 --dry-run --Werror

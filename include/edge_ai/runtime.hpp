@@ -16,20 +16,17 @@ namespace edge_ai
 
 class Runtime
 {
-public:
+  public:
     // 原有构造函数：保留，兼容现有 main 和测试
-    explicit Runtime(const std::string& video_path, double target_fps = 0.0, QueuePolicy policy = QueuePolicy::Blocking);
-    
+    explicit Runtime(const std::string &video_path, double target_fps = 0.0,
+                     QueuePolicy policy = QueuePolicy::Blocking);
+
     // 新构造函数：接收任意 FrameSource 实现
-    explicit Runtime(std::unique_ptr<FrameSource> source_, 
-                     QueuePolicy policy = QueuePolicy::Blocking,
-                     std::size_t queue_capacity = 4,
-                     std::string model_path = "models/yolov8n.onnx",
-                     double deadline_ms = 100.0,
-                     double confidence_threshold = 0.25,
-                     double nms_iou_threshold = 0.45,
-                     bool display_enabled = false,
-                     int intra_op_threads = 0);
+    explicit Runtime(std::unique_ptr<FrameSource> source_,
+                     QueuePolicy policy = QueuePolicy::Blocking, std::size_t queue_capacity = 4,
+                     std::string model_path = "models/yolov8n.onnx", double deadline_ms = 100.0,
+                     double confidence_threshold = 0.25, double nms_iou_threshold = 0.45,
+                     bool display_enabled = false, int intra_op_threads = 0);
 
     ~Runtime();
 
@@ -39,11 +36,11 @@ public:
 
     int exit_code() const;
 
-    bool try_pop_display(InferenceResult& result);
+    bool try_pop_display(InferenceResult &result);
 
     bool display_finished() const;
 
-private:
+  private:
     void capture_loop();
     void processing_loop();
 
@@ -56,13 +53,13 @@ private:
     std::thread processing_thread;
 
     // 下达停止通知
-    std::atomic<bool> stop_requested_{false}; 
+    std::atomic<bool> stop_requested_{false};
     // 判断退出状态
     std::atomic<int> exit_code_{0};
 
     // 是否开始的flag
     bool started_{false};
-    // onnx 
+    // onnx
     std::string model_path_;
 
     double deadline_ms_{100.0};
@@ -80,4 +77,4 @@ private:
     std::atomic<bool> display_finished_{false};
 };
 
-}  // namespace edge_ai
+} // namespace edge_ai

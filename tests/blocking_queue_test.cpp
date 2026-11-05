@@ -27,8 +27,7 @@ int main()
             }
 
             queue.close();
-        }
-    );
+        });
 
     std::thread consumer(
         [&queue, &received]
@@ -44,8 +43,7 @@ int main()
                 // 不管发生什么，我都睡固定时间 100ms
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-        }
-    );
+        });
 
     // 主线程等待两个子线程运行结束
     producer.join();

@@ -7,10 +7,7 @@
 namespace edge_ai
 {
 // 辅助函数：计算iou
-float compute_iou(
-    const cv::Rect2f& a,
-    const cv::Rect2f& b
-)
+float compute_iou(const cv::Rect2f &a, const cv::Rect2f &b)
 {
     const float inter_left = std::max(a.x, b.x);
     const float inter_top = std::max(a.y, b.y);
@@ -30,31 +27,23 @@ float compute_iou(
     {
         return 0.0F;
     }
-    
+
     return inter_area / union_area;
 }
 
-
 // 辅助函数：通过nms比较8400个框的iou，并返回
-std::vector<Detection> apply_nms(
-    std::vector<Detection> candidates,
-    float iou_threshold
-)
+std::vector<Detection> apply_nms(std::vector<Detection> candidates, float iou_threshold)
 {
     // 排序，按Lambda 表达式排序
-    std::sort(candidates.begin(), 
-        candidates.end(), 
-        [](const Detection& lhs, const Detection& rhs)
-        {
-            return lhs.confidence > rhs.confidence;
-        });
-    // 
+    std::sort(candidates.begin(), candidates.end(), [](const Detection &lhs, const Detection &rhs)
+              { return lhs.confidence > rhs.confidence; });
+    //
     std::vector<Detection> kept_detections;
-    for(const auto& candidate : candidates)
+    for (const auto &candidate : candidates)
     {
         // 是否被高分同类框抑制
         bool should_suppress = false;
-        for (const auto& kept : kept_detections)
+        for (const auto &kept : kept_detections)
         {
             if (candidate.class_id == kept.class_id)
             {
@@ -74,13 +63,9 @@ std::vector<Detection> apply_nms(
     return kept_detections;
 }
 
-
-std::vector<Detection> postprocess_yolo(
-    const float* output_data,
-    std::size_t num_candidates,
-    const PreprocessResult& preprocess,
-    float confidence_threshold,
-    float nms_iou_threshold)
+std::vector<Detection> postprocess_yolo(const float *output_data, std::size_t num_candidates,
+                                        const PreprocessResult &preprocess,
+                                        float confidence_threshold, float nms_iou_threshold)
 {
     std::vector<Detection> candidates;
     if (output_data == nullptr || num_candidates == 0)
@@ -92,8 +77,8 @@ std::vector<Detection> postprocess_yolo(
     {
         const float cx = output_data[0 * num_candidates + i];
         const float cy = output_data[1 * num_candidates + i];
-        const float w  = output_data[2 * num_candidates + i];
-        const float h  = output_data[3 * num_candidates + i];
+        const float w = output_data[2 * num_candidates + i];
+        const float h = output_data[3 * num_candidates + i];
 
         float max_score = 0.0F;
         int best_class_id{-1};
@@ -107,13 +92,13 @@ std::vector<Detection> postprocess_yolo(
                 best_class_id = c;
             }
         }
-        
+
         if (max_score < confidence_threshold)
         {
             continue;
         }
-        
-        if(w<=0 || h<=0)
+
+        if (w <= 0 || h <= 0)
         {
             continue;
         }
@@ -128,7 +113,6 @@ std::vector<Detection> postprocess_yolo(
         candidates.push_back(det);
     }
 
-
     auto final_detections = apply_nms(candidates, nms_iou_threshold);
 
     const float original_w = static_cast<float>(preprocess.original_width);
@@ -138,13 +122,13 @@ std::vector<Detection> postprocess_yolo(
     // 预留空间给 valid_detections
     valid_detections.reserve(final_detections.size());
 
-    for (const auto& candidate : final_detections)
+    for (const auto &candidate : final_detections)
     {
         // 逆向反算还原到未裁剪的原图坐标
         const float raw_x1 = (candidate.box.x - preprocess.pad_x) / preprocess.scale;
         const float raw_y1 = (candidate.box.y - preprocess.pad_y) / preprocess.scale;
-        const float raw_w  = candidate.box.width / preprocess.scale;
-        const float raw_h  = candidate.box.height / preprocess.scale;
+        const float raw_w = candidate.box.width / preprocess.scale;
+        const float raw_h = candidate.box.height / preprocess.scale;
 
         // TODO 1: 取得还原后框的 x1、y1、x2、y2
         const float raw_x2 = raw_x1 + raw_w;
@@ -166,9 +150,9 @@ std::vector<Detection> postprocess_yolo(
 
         // TODO 4: 重新构造 Rect2f
         Detection det;
-        det.class_id   = candidate.class_id;
+        det.class_id = candidate.class_id;
         det.confidence = candidate.confidence;
-        det.box        = cv::Rect2f(x1, y1, x2 - x1, y2 - y1);
+        det.box = cv::Rect2f(x1, y1, x2 - x1, y2 - y1);
 
         valid_detections.push_back(det);
     }

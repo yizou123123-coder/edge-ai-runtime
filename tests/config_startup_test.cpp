@@ -10,20 +10,15 @@ using edge_ai::RuntimeConfig;
 using edge_ai::SourceType;
 
 // 验证合法配置不会抛异常
-void expect_valid(
-    const RuntimeConfig& config,
-    const std::string& case_name)
+void expect_valid(const RuntimeConfig &config, const std::string &case_name)
 {
     edge_ai::validate_startup_config(config);
 
-    std::cout
-        << "[PASS] " << case_name << '\n';
+    std::cout << "[PASS] " << case_name << '\n';
 }
 
 // 验证非法配置必须抛出 invalid_argument
-void expect_invalid(
-    const RuntimeConfig& config,
-    const std::string& case_name)
+void expect_invalid(const RuntimeConfig &config, const std::string &case_name)
 {
     bool rejected = false;
 
@@ -31,20 +26,17 @@ void expect_invalid(
     {
         edge_ai::validate_startup_config(config);
     }
-    catch (const std::invalid_argument&)
+    catch (const std::invalid_argument &)
     {
         rejected = true;
     }
 
     if (!rejected)
     {
-        throw std::runtime_error(
-            "Invalid config accepted: " + case_name
-        );
+        throw std::runtime_error("Invalid config accepted: " + case_name);
     }
 
-    std::cout
-        << "[PASS] " << case_name << '\n';
+    std::cout << "[PASS] " << case_name << '\n';
 }
 
 int main()
@@ -59,10 +51,7 @@ int main()
             config.source.video_path = "test.mp4";
             config.model.path = "models/yolov8n.onnx";
 
-            expect_valid(
-                config,
-                "Video with valid paths"
-            );
+            expect_valid(config, "Video with valid paths");
         }
 
         // Test 2：Video + 空视频路径
@@ -72,10 +61,7 @@ int main()
             config.source.type = SourceType::Video;
             config.source.video_path = "";
 
-            expect_invalid(
-                config,
-                "Video with empty video path rejected"
-            );
+            expect_invalid(config, "Video with empty video path rejected");
         }
 
         // Test 3：Camera + 空视频路径是允许的
@@ -87,10 +73,7 @@ int main()
             config.source.camera_index = 0;
             config.model.path = "models/yolov8n.onnx";
 
-            expect_valid(
-                config,
-                "Camera without video path"
-            );
+            expect_valid(config, "Camera without video path");
         }
 
         // Test 4：Video + 空模型路径
@@ -101,10 +84,7 @@ int main()
             config.source.video_path = "test.mp4";
             config.model.path = "";
 
-            expect_invalid(
-                config,
-                "Video with empty model path rejected"
-            );
+            expect_invalid(config, "Video with empty model path rejected");
         }
 
         // Test 5：Camera + 空模型路径
@@ -115,21 +95,16 @@ int main()
             config.source.video_path = "";
             config.model.path = "";
 
-            expect_invalid(
-                config,
-                "Camera with empty model path rejected"
-            );
+            expect_invalid(config, "Camera with empty model path rejected");
         }
 
-        std::cout
-            << "\nConfigStartup: ALL PASS\n";
+        std::cout << "\nConfigStartup: ALL PASS\n";
 
         return 0;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
-        std::cerr
-            << "[FAIL] " << e.what() << '\n';
+        std::cerr << "[FAIL] " << e.what() << '\n';
 
         return 1;
     }
