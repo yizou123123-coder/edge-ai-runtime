@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential cmake \
+            build-essential cmake clang \
             libopencv-dev libyaml-cpp-dev
 
       - name: Install ONNX Runtime
@@ -49,3 +49,19 @@ jobs:
           ctest --test-dir build/release \
             -R '^(preprocess_test|postprocess_test|coordinate_restore_test|drop_oldest_test|latest_frame_test|queue_policy_concurrency_test)$' \
             --output-on-failure
+
+      
+      - name: Build and test ASan
+        run: |
+          cmake --preset x86-asan
+          cmake --build --preset x86-asan --target preprocess_test -j4
+          ctest --test-dir build/x86-asan \
+            -R '^preprocess_test$' \
+            --output-on-failure
+
+      - name: Build and test TSan
+        run: |
+          cmake --preset x86-tsan
+          cmake --build --preset x86-tsan --target blocking_queue_test -j4
+          ./build/x86-tsan/blocking_queue_test
+
