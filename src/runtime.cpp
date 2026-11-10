@@ -155,8 +155,7 @@ void Runtime::processing_loop()
         while (frame_queue_.pop(frame))
         {
             const auto process_start = std::chrono::steady_clock::now();
-            const double pre_process_age_ms =
-                std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
+            const double pre_process_age_ms = std::chrono::duration<double, std::milli>(process_start - frame.capture_ts).count();
             pre_process_ages_ms.push_back(pre_process_age_ms);
 
             DetectionTiming timing;
@@ -164,8 +163,7 @@ void Runtime::processing_loop()
             detection_timings.push_back(timing);
 
             const auto output_at = std::chrono::steady_clock::now();
-            const double frame_age_ms =
-                std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
+            const double frame_age_ms = std::chrono::duration<double, std::milli>(output_at - frame.capture_ts).count();
             frame_ages_ms.push_back(frame_age_ms);
             if (frame_age_ms > deadline_ms_)
             {
@@ -270,14 +268,11 @@ void Runtime::processing_loop()
 
     if (!pre_process_ages_ms.empty())
     {
-        Logger::info("[Processing] Capture-to-Process P50: " +
-                     std::to_string(percentile(pre_process_ages_ms, 0.50)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P50: " + std::to_string(percentile(pre_process_ages_ms, 0.50)) + " ms");
 
-        Logger::info("[Processing] Capture-to-Process P95: " +
-                     std::to_string(percentile(pre_process_ages_ms, 0.95)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P95: " + std::to_string(percentile(pre_process_ages_ms, 0.95)) + " ms");
 
-        Logger::info("[Processing] Capture-to-Process P99: " +
-                     std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
+        Logger::info("[Processing] Capture-to-Process P99: " + std::to_string(percentile(pre_process_ages_ms, 0.99)) + " ms");
     }
 
     if (!detection_timings.empty())
@@ -301,19 +296,15 @@ void Runtime::processing_loop()
                 return;
             }
 
-            const double mean = std::accumulate(values.begin(), values.end(), 0.0) /
-                                static_cast<double>(values.size());
+            const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
 
             Logger::info("[Processing] " + stage + " Mean: " + std::to_string(mean) + " ms");
 
-            Logger::info("[Processing] " + stage +
-                         " P50: " + std::to_string(percentile(values, 0.50)) + " ms");
+            Logger::info("[Processing] " + stage + " P50: " + std::to_string(percentile(values, 0.50)) + " ms");
 
-            Logger::info("[Processing] " + stage +
-                         " P95: " + std::to_string(percentile(values, 0.95)) + " ms");
+            Logger::info("[Processing] " + stage + " P95: " + std::to_string(percentile(values, 0.95)) + " ms");
 
-            Logger::info("[Processing] " + stage +
-                         " P99: " + std::to_string(percentile(values, 0.99)) + " ms");
+            Logger::info("[Processing] " + stage + " P99: " + std::to_string(percentile(values, 0.99)) + " ms");
         };
 
         // TODO 2：统计三个阶段
