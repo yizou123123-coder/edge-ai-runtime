@@ -56,9 +56,18 @@ find_package(OpenCV REQUIRED COMPONENTS
 
 find_package(Threads REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
+# Compatibility with older yaml-cpp CMake packages
+if(NOT TARGET yaml-cpp::yaml-cpp)
+    if(TARGET yaml-cpp)
+        add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+    else()
+        message(FATAL_ERROR "yaml-cpp target not found")
+    endif()
+endif()
 
 set(ONNXRUNTIME_ROOT
     "${PROJECT_SOURCE_DIR}/third_party/onnxruntime"
+    CACHE PATH "ONNX Runtime installation directory"
 )
 
 add_library(onnxruntime SHARED IMPORTED)
@@ -252,3 +261,17 @@ target_compile_features(yaml_smoke_test
 target_link_libraries(yaml_smoke_test
     PRIVATE yaml-cpp::yaml-cpp
 )
+
+# P6-02 portable ARM64 RUNPATH
+if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    get_property(_p6_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_p6_target IN LISTS _p6_targets)
+        get_target_property(_p6_type "${_p6_target}" TYPE)
+        if(_p6_type STREQUAL "EXECUTABLE")
+            set_target_properties("${_p6_target}" PROPERTIES
+                BUILD_WITH_INSTALL_RPATH TRUE
+                INSTALL_RPATH "$ORIGIN/../lib"
+            )
+        endif()
+    endforeach()
+endif()

@@ -11,7 +11,6 @@
         "ENABLE_TSAN": "OFF"
       }
     },
-
     {
       "name": "x86-release",
       "generator": "Unix Makefiles",
@@ -22,7 +21,6 @@
         "ENABLE_TSAN": "OFF"
       }
     },
-
     {
       "name": "x86-asan",
       "generator": "Unix Makefiles",
@@ -33,7 +31,6 @@
         "ENABLE_TSAN": "OFF"
       }
     },
-
     {
       "name": "x86-tsan",
       "generator": "Unix Makefiles",
@@ -44,10 +41,21 @@
         "ENABLE_ASAN": "OFF",
         "ENABLE_TSAN": "ON"
       }
+    },
+    {
+      "name": "arm64-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/arm64-release",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-gnu.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_ASAN": "OFF",
+        "ENABLE_TSAN": "OFF",
+        "ONNXRUNTIME_ROOT": "/opt/onnxruntime",
+        "CMAKE_EXE_LINKER_FLAGS": "-Wl,-rpath-link,/opt/sysroot/usr/lib/aarch64-linux-gnu/blas -Wl,-rpath-link,/opt/sysroot/usr/lib/aarch64-linux-gnu/lapack"
+      }
     }
   ],
-
-
   "buildPresets": [
     {
       "name": "x86-debug",
@@ -64,6 +72,10 @@
     {
       "name": "x86-tsan",
       "configurePreset": "x86-tsan"
+    },
+    {
+      "name": "arm64-release",
+      "configurePreset": "arm64-release"
     }
   ]
 }
