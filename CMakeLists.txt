@@ -8,6 +8,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 1. Build Options
 # ============================================================
 
+# P7: Optional NVIDIA TensorRT backend
+option(EDGE_ENABLE_TENSORRT "Enable NVIDIA TensorRT inference backend" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 

@@ -54,6 +54,22 @@
         "ONNXRUNTIME_ROOT": "/opt/onnxruntime",
         "CMAKE_EXE_LINKER_FLAGS": "-Wl,-rpath-link,/opt/sysroot/usr/lib/aarch64-linux-gnu/blas -Wl,-rpath-link,/opt/sysroot/usr/lib/aarch64-linux-gnu/lapack"
       }
+    },
+    {
+      "name": "x86-cuda-debug",
+      "inherits": "x86-debug",
+      "binaryDir": "${sourceDir}/build/x86-cuda-debug",
+      "cacheVariables": {
+        "EDGE_ENABLE_TENSORRT": "ON"
+      }
+    },
+    {
+      "name": "x86-cuda-release",
+      "inherits": "x86-release",
+      "binaryDir": "${sourceDir}/build/x86-cuda-release",
+      "cacheVariables": {
+        "EDGE_ENABLE_TENSORRT": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -76,6 +92,14 @@
     {
       "name": "arm64-release",
       "configurePreset": "arm64-release"
+    },
+    {
+      "name": "x86-cuda-debug",
+      "configurePreset": "x86-cuda-debug"
+    },
+    {
+      "name": "x86-cuda-release",
+      "configurePreset": "x86-cuda-release"
     }
   ]
 }
