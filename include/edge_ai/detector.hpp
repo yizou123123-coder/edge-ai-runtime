@@ -4,7 +4,9 @@
 #include <edge_ai/preprocess.hpp>
 #include <onnxruntime_cxx_api.h>
 #include <opencv2/core.hpp>
+#include <edge_ai/inference_engine.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -27,12 +29,7 @@ class OnnxDetector
     std::vector<Detection> detect(const cv::Mat &frame, DetectionTiming *timing = nullptr);
 
   private:
-    Ort::Env env_;
-    Ort::SessionOptions session_options_;
-    Ort::Session session_;
-
-    std::string input_name_;
-    std::string output_name_;
+    std::unique_ptr<IInferenceEngine> engine_;
 
     double confidence_threshold_{0.25};
     double nms_iou_threshold_{0.45};

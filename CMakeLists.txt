@@ -13,6 +13,45 @@ option(EDGE_ENABLE_TENSORRT "Enable NVIDIA TensorRT inference backend" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 
+
+if(EDGE_ENABLE_TENSORRT)
+    find_package(CUDAToolkit REQUIRED)
+
+    find_path(TENSORRT_INCLUDE_DIR
+        NAMES NvInfer.h
+        PATH_SUFFIXES x86_64-linux-gnu
+        REQUIRED
+    )
+
+    find_library(TENSORRT_LIBRARY
+        NAMES nvinfer
+        REQUIRED
+    )
+
+    add_library(edge_trt_backend
+        src/trt_engine.cpp
+    )
+
+    target_include_directories(edge_trt_backend PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+        ${TENSORRT_INCLUDE_DIR}
+    )
+
+    target_link_libraries(edge_trt_backend PUBLIC
+        CUDA::cudart
+        ${TENSORRT_LIBRARY}
+    )
+
+    add_executable(trt_engine_smoke
+        tests/trt_engine_smoke.cpp
+    )
+
+    target_link_libraries(trt_engine_smoke PRIVATE
+        edge_trt_backend
+    )
+endif()
+
+
 if(ENABLE_ASAN)
     message(STATUS "AddressSanitizer: ENABLED")
 
@@ -97,6 +136,7 @@ add_library(edge_runtime_core
     src/detector.cpp
     src/frame_source_factory.cpp
     src/config_loader.cpp
+    src/ort_cpu_engine.cpp
 )
 
 target_compile_features(edge_runtime_core
